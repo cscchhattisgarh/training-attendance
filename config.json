@@ -108,6 +108,15 @@
       "start_time": "2026-10-10T16:55:00+05:30",
       "expiry": "2026-10-10T17:15:00+05:30",
       "form_url": "https://docs.google.com/forms/d/e/1FAIpQLScpS9pya78KOmWDe4LPx2yXK4kYUnUF60j6q5yIhElBKbbA0Q/viewform?embedded=true"
+    },
+    {
+      "id": "labour_ekyc_neeraj_hardev",
+      "topic_id": "labour_ekyc",
+      "name": "Labour eKYC Training (Neeraj Hardev)",
+      "password": "141026",
+      "start_time": "2026-10-14T15:23:00+05:30",
+      "expiry": "2026-10-14T17:00:00+05:30",
+      "form_url": "https://docs.google.com/forms/d/e/1FAIpQLScpS9pya78KOmWDe4LPx2yXK4kYUnUF60j6q5yIhElBKbbA0Q/viewform?embedded=true"
     }
   ]
 }
