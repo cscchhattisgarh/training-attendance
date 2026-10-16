@@ -17,14 +17,6 @@
       "password": "111111",
       "start_time": "2026-10-16T17:47:00+05:30",
       "expiry": "2026-10-16T18:44:00+05:30"
-    },
-    {
-      "id": "wifi_choupal_pushpen_kumar_verma",
-      "topic_id": "wifi_choupal",
-      "name": "WiFi Choupal Training (Pushpen Kumar Verma)",
-      "password": "444444",
-      "start_time": "2026-10-16T17:55:00+05:30",
-      "expiry": "2026-10-16T17:57:00+05:30"
     }
   ]
 }
