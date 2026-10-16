@@ -17,6 +17,14 @@
       "password": "111111",
       "start_time": "2026-10-16T17:47:00+05:30",
       "expiry": "2026-10-16T18:44:00+05:30"
+    },
+    {
+      "id": "wifi_choupal_neeraj_hardev",
+      "topic_id": "wifi_choupal",
+      "name": "WiFi Choupal Training (Neeraj Hardev)",
+      "password": "222222",
+      "start_time": "2026-10-16T18:22:00+05:30",
+      "expiry": "2026-10-16T18:25:00+05:30"
     }
   ]
 }
