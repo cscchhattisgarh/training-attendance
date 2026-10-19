@@ -21,7 +21,7 @@
     h1 { margin: 5px 0 4px; font-size: 22px; color: #1f2937; }
     h2 { margin: 0 0 18px; font-size: 18px; color: #2563eb; font-weight: 600; }
     .subtitle { font-size: 15px; color: #6b7280; margin-bottom: 25px; line-height: 1.5; }
-    label { display: block; text-align: left; font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 8px; }
+    label { display: block; text-align: left; font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 6px; }
 
     .password-wrapper { position: relative; width: 100%; }
     .password-mask {
@@ -31,18 +31,18 @@
     }
     .password-mask span.filled { color: #1f2937; }
 
-    input {
+    #password {
       width: 100%; padding: 14px; border: 1px solid #d1d5db;
       border-radius: 8px; font-size: 18px; text-align: center;
       outline: none; background: transparent; color: transparent;
       caret-color: #2563eb; letter-spacing: 12px;
     }
-    input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    #password:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
 
     button {
-      width: 100%; margin-top: 22px; padding: 14px; border: none;
+      width: 100%; margin-top: 15px; padding: 14px; border: none;
       border-radius: 8px; background: #2563eb; color: white;
-      font-size: 17px; font-weight: bold; cursor: pointer;
+      font-size: 16px; font-weight: bold; cursor: pointer;
     }
     button:disabled { background: #93c5fd; cursor: not-allowed; }
 
@@ -50,6 +50,22 @@
     .error { color: #dc2626; }
     .loading { color: #2563eb; }
 
+    /* Custom Web Form */
+    #formWrapper {
+      display: none; width: 92%; max-width: 600px;
+      background: #ffffff; border-radius: 16px; padding: 30px 25px;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.12); margin: 30px auto;
+    }
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-control {
+      width: 100%; padding: 12px 14px; border: 1px solid #d1d5db;
+      border-radius: 8px; font-size: 15px; outline: none;
+    }
+    .form-control:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    .field-hint { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .field-error { color: #dc2626; font-size: 12px; margin-top: 4px; display: none; }
+
+    /* Google Form Container */
     #formContainer { display: none; width: 100%; min-height: 100vh; background: #ffffff; }
     #googleForm { width: 100%; height: 100vh; min-height: 800px; border: none; display: block; }
   </style>
@@ -57,6 +73,7 @@
 
 <body>
 
+  <!-- Password Section -->
   <div class="container" id="passwordContainer">
     <div class="logo">📋</div>
     <h1>CSC VLE Attendance For</h1>
@@ -93,11 +110,179 @@
     <div style="margin-top: 25px; font-size: 12px; color: #9ca3af;">CSC State Office</div>
   </div>
 
+  <!-- 1. Custom Webpage Form (For Labour eKYC) -->
+  <div id="formWrapper">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <div style="font-size: 35px;">📝</div>
+      <h2 id="activeSessionHeader" style="margin: 5px 0; color: #1f2937;">Labour eKYC Attendance Form</h2>
+      <p style="font-size: 13px; color: #6b7280; margin: 0;">कृपया अपनी सभी जानकारी सही-सही दर्ज करें।</p>
+    </div>
+
+    <form id="attendanceForm">
+      <div class="form-group">
+        <label for="email">Email Address *</label>
+        <input type="email" id="email" class="form-control" placeholder="example@gmail.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="district">District Name *</label>
+        <select id="district" class="form-control" required onchange="populateBlocks()">
+          <option value="">-- Select District --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="block">Block *</label>
+        <select id="block" class="form-control" required disabled>
+          <option value="">-- First Select District --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="gpWard">Gram Panchayat / Ward *</label>
+        <input type="text" id="gpWard" class="form-control" placeholder="Enter Gram Panchayat or Ward" required>
+      </div>
+
+      <div class="form-group">
+        <label for="cscId">CSC ID (12 Digits) *</label>
+        <input 
+          type="text" 
+          id="cscId" 
+          class="form-control" 
+          maxlength="12" 
+          inputmode="numeric" 
+          placeholder="e.g. 274712200015" 
+          oninput="handleCscInput(this)" 
+          required
+        >
+        <div class="field-hint">
+          <span>Rule: 9th & 10th '00', 11th '1'</span>
+          <span id="cscCounter" style="font-weight: bold;">0/12</span>
+        </div>
+        <div id="cscError" class="field-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="vleName">VLE Full Name *</label>
+        <input type="text" id="vleName" class="form-control" placeholder="Enter Full Name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="mobile">Mobile Number (10 Digits) *</label>
+        <input 
+          type="tel" 
+          id="mobile" 
+          class="form-control" 
+          maxlength="10" 
+          inputmode="numeric" 
+          placeholder="10 digit mobile number" 
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+          required
+        >
+      </div>
+
+      <button type="submit" id="submitFormBtn">Submit Attendance</button>
+    </form>
+    <div id="formSubmissionMsg" class="message"></div>
+  </div>
+
+  <!-- 2. Secure Embedded Google Form (For WiFi Choupal) -->
   <div id="formContainer">
     <iframe id="googleForm" src="" frameborder="0">Loading Form...</iframe>
   </div>
 
   <script>
+    const SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwpTTctuIyzL7eLBUKd5shb7NioozZ5iqYUQYSmwWGpKsPN-QmpXZ0JXg0om1bfj74l/exec";
+
+    const districtBlockData = {
+      "Balod": ["Balod", "Dondi", "Dondi Luhara", "Gunderdehi", "Gurur"],
+      "Baloda Bazar": ["Baloda Bazar", "Bhatapara", "Kasdol", "Palari", "Simga"],
+      "Balrampur": ["Balrampur", "Kusmi", "Rajpur", "Ramchandrapur", "Samri", "Shankargarh", "Wadrafnagar"],
+      "Bastar": ["Bastanar", "Bastar", "Bakawand", "Darbha", "Jagdalpur", "Lohandiguda", "Tokapal"],
+      "Bemetara": ["Bemetara", "Berla", "Nawagarh", "Saja", "Thanakhamria"],
+      "Bijapur": ["Bhopalpattanam", "Bijapur", "Bhairamgarh", "Usur"],
+      "Bilaspur": ["Bilha", "Kota", "Masturi", "Takhatpur", "Belha"],
+      "Dantewada": ["Dantewada", "Geedam", "Katekalyan", "Kuwakonda"],
+      "Dhamtari": ["Dhamtari", "Kurud", "Magarlod", "Nagri"],
+      "Durg": ["Durg", "Dhamdha", "Patan"],
+      "Gariaband": ["Chhura", "Deobhog", "Fingeshwar", "Gariaband", "Mainpur"],
+      "Gaurela Pendra Marwahi": ["Gaurela", "Marwahi", "Pendra"],
+      "Janjgir-Champa": ["Akaltara", "Baloda", "Champa", "Janjgir", "Nawagarh", "Pamgarh"],
+      "Jashpur": ["Bagicha", "Duldula", "Farsabahar", "Jashpur", "Kunkuri", "Kansabel", "Manora", "Pathalgaon"],
+      "Kabirdham": ["Bodla", "Kawardha", "Pandariya", "Sahaspur Lohara"],
+      "Kanker": ["Antagarh", "Bhanupratappur", "Charama", "Durgukondal", "Kanker", "Koyalibeda", "Narharpur"],
+      "Khairagarh": ["Chhuikhadan", "Gandai", "Khairagarh"],
+      "Kondagaon": ["Bade Rajpur", "Faraskgaon", "Keshkal", "Kondagaon", "Makdi"],
+      "Korba": ["Katghora", "Korba", "Kartala", "Pali", "Poundi-Uproda"],
+      "Koriya": ["Baikunthpur", "Sonhat"],
+      "Mahasamund": ["Bagbahra", "Basna", "Mahasamund", "Pithora", "Saraipali"],
+      "Manendragarh": ["Bharatpur", "Khadgawan", "Manendragarh"],
+      "Mohla Manpur": ["Ambagarh Chowki", "Manpur", "Mohla"],
+      "Mungeli": ["Lormi", "Mungeli", "Pathariya"],
+      "Narayanpur": ["Narayanpur", "Orchha"],
+      "Raigarh": ["Baramkela", "Gharghoda", "Kharsia", "Lailunga", "Pussore", "Raigarh", "Tamnar", "Dharamjaigarh"],
+      "Raipur": ["Abhanpur", "Arang", "Dharsiwa", "Tilda"],
+      "Rajnandgaon": ["Chhuria", "Dongargaon", "Dongargarh", "Rajnandgaon"],
+      "Sarangarh Bilaigarh": ["Baramkela", "Bilaigarh", "Sarangarh"],
+      "Sakti": ["Dabhra", "Jaijaipur", "Malkharoda", "Sakti"],
+      "Sukma": ["Chhindgarh", "Konta", "Sukma"],
+      "Surajpur": ["Bhaiyathan", "Bishrampur", "Odgi", "Pratappur", "Premnagar", "Ramanujnagar", "Surajpur"],
+      "Surguja": ["Ambikapur", "Batauli", "Lakhanpur", "Lundra", "Mainpat", "Sitapur", "Udaipur"]
+    };
+
+    function initDistricts() {
+      const distSelect = document.getElementById("district");
+      distSelect.innerHTML = '<option value="">-- Select District --</option>';
+      Object.keys(districtBlockData).sort().forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        distSelect.appendChild(opt);
+      });
+    }
+
+    function populateBlocks() {
+      const dist = document.getElementById("district").value;
+      const blkSelect = document.getElementById("block");
+      blkSelect.innerHTML = '<option value="">-- Select Block --</option>';
+
+      if (dist && districtBlockData[dist]) {
+        districtBlockData[dist].forEach(b => {
+          const opt = document.createElement("option");
+          opt.value = b;
+          opt.textContent = b;
+          blkSelect.appendChild(opt);
+        });
+        blkSelect.disabled = false;
+      } else {
+        blkSelect.disabled = true;
+      }
+    }
+
+    function handleCscInput(input) {
+      input.value = input.value.replace(/[^0-9]/g, '');
+      const val = input.value;
+      const counter = document.getElementById("cscCounter");
+      const err = document.getElementById("cscError");
+      counter.textContent = `${val.length}/12`;
+
+      if (val.length === 12) {
+        const ninth = val.charAt(8);
+        const tenth = val.charAt(9);
+        const eleventh = val.charAt(10);
+
+        if (ninth !== '0' || tenth !== '0' || eleventh !== '1') {
+          err.textContent = "अमान्य CSC ID: 9th और 10th digit '00' तथा 11th digit '1' होना चाहिए!";
+          err.style.display = "block";
+        } else {
+          err.style.display = "none";
+        }
+      } else {
+        err.style.display = "none";
+      }
+    }
+
+    // GitHub Config Fetching
     const GITHUB_USERNAME = "cscchhattisgarh"; 
     const REPO_NAME = "labour-ekcy-training-attendance"; 
     const FILE_PATH = "config.json"; 
@@ -108,6 +293,7 @@
     const verifyButton = document.getElementById("verifyButton");
     const message = document.getElementById("message");
     const passwordContainer = document.getElementById("passwordContainer");
+    const formWrapper = document.getElementById("formWrapper");
     const formContainer = document.getElementById("formContainer");
     const googleForm = document.getElementById("googleForm");
 
@@ -138,7 +324,6 @@
         const decodedText = base64ToUtf8(data.content);
         return JSON.parse(decodedText);
       } catch (e) {
-        console.error("Config Fetch Error:", e);
         return null;
       }
     }
@@ -180,14 +365,6 @@
 
       if (config.trainings && Array.isArray(config.trainings)) {
         matchingSessions = config.trainings.filter(t => String(t.password).trim() === userPwd);
-      } else if (String(config.password).trim() === userPwd) {
-        matchingSessions = [{
-          name: "Training Portal",
-          password: config.password,
-          start_time: config.start_time,
-          expiry: config.expiry,
-          form_url: config.form_url
-        }];
       }
 
       if (matchingSessions.length === 0) {
@@ -236,11 +413,90 @@
         return;
       }
 
-      // Success
-      googleForm.src = activeSession.form_url;
+      // Password Success: ROUTING BASED ON TOPIC
       passwordContainer.style.display = "none";
-      formContainer.style.display = "block";
-      document.body.style.background = "#ffffff";
+
+      if (activeSession.topic_id === "wifi_choupal") {
+        // WiFi Choupal: Load Google Form via Secure Backend Proxy
+        googleForm.src = `${SCRIPT_WEB_APP_URL}?action=loadWifiForm`;
+        formContainer.style.display = "block";
+        document.body.style.background = "#ffffff";
+      } else {
+        // Labour eKYC: Load Custom Web Form
+        initDistricts();
+        document.getElementById("activeSessionHeader").textContent = activeSession.name || "Labour eKYC Attendance Form";
+        formWrapper.style.display = "block";
+        document.body.style.display = "block";
+      }
+    });
+
+    // Form Submit Handler (Labour eKYC)
+    document.getElementById("attendanceForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const cscId = document.getElementById("cscId").value.trim();
+      const mobile = document.getElementById("mobile").value.trim();
+      const submitBtn = document.getElementById("submitFormBtn");
+      const msg = document.getElementById("formSubmissionMsg");
+
+      if (cscId.length !== 12) {
+        alert("CSC ID ठीक 12 अंकों की होनी चाहिए!");
+        return;
+      }
+
+      // 9th & 10th '00' and 11th '1'
+      if (cscId.charAt(8) !== '0' || cscId.charAt(9) !== '0' || cscId.charAt(10) !== '1') {
+        alert("अमान्य CSC ID! 9th और 10th digit '00' तथा 11th digit '1' होना अनिवार्य है।");
+        return;
+      }
+
+      if (!/^\d{10}$/.test(mobile)) {
+        alert("Mobile Number ठीक 10 अंकों का होना चाहिए!");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Checking & Submitting...";
+      msg.textContent = "";
+
+      const payload = {
+        email: document.getElementById("email").value.trim(),
+        district: document.getElementById("district").value,
+        block: document.getElementById("block").value,
+        gpWard: document.getElementById("gpWard").value.trim(),
+        cscId: cscId,
+        name: document.getElementById("vleName").value.trim(),
+        mobile: mobile
+      };
+
+      fetch(SCRIPT_WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.duplicate) {
+          alert("⚠️ " + data.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Attendance";
+        } else if (data.success) {
+          alert("✅ आपकी Attendance सफलतापूर्वक दर्ज हो गई है!");
+          document.getElementById("attendanceForm").reset();
+          document.getElementById("block").disabled = true;
+          document.getElementById("cscCounter").textContent = "0/12";
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Attendance";
+        } else {
+          alert("Error: " + (data.error || "Submission Failed"));
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Attendance";
+        }
+      })
+      .catch(err => {
+        alert("Network/Server Error! कृपया पुनः प्रयास करें।");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Attendance";
+      });
     });
   </script>
 </body>
