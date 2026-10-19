@@ -37,7 +37,6 @@
     }
     .vle-link-box a { color: #2563eb; font-weight: bold; text-decoration: underline; }
     .training-item { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #cbd5e1; }
-    .note { font-size: 11px; color: #64748b; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -52,8 +51,8 @@
       <label for="trainingSelect">Select Training Topic: <span>*</span></label>
       <select id="trainingSelect" onchange="handleSelectionChange()" required>
         <option value="" disabled selected>-- Select Topic --</option>
-        <option value="labour_ekyc">Labour eKYC Training</option>
-        <option value="wifi_choupal">WiFi Choupal Training</option>
+        <option value="labour_ekyc">Labour eKYC Training (Web Form)</option>
+        <option value="wifi_choupal">WiFi Choupal Training (Google Form)</option>
       </select>
 
       <label for="trainerSelect">Select Trainer: <span>*</span></label>
@@ -64,19 +63,14 @@
         <option value="krishnandan_kumar">Krishnandan Kumar</option>
         <option value="neeta_sahu">Neeta Sahu</option>
         <option value="suruchi_shesh">Suruchi Shesh</option>
-        <option value="ravikant sahu">Ravikant Sahu</option>
-      <option value="rahul_soni">Rahul Soni</option>
+        <option value="ravikant_sahu">Ravikant Sahu</option>
+        <option value="rahul_soni">Rahul Soni</option>
         <option value="narayan_devnath">Narayan Devnath</option>
         <option value="vikas_nayak">Vikas Nayak</option>
         <option value="surendra_das">Surendra Das</option>
-        
       </select>
 
-      <label for="formUrl">Google Form Embed URL: <span>*</span></label>
-      <input type="url" id="formUrl" placeholder="https://docs.google.com/forms/d/e/.../viewform?embedded=true" disabled required>
-      <div class="note">Naya Google Form Link paste kar sakte hain. URL me '?embedded=true' zaroor hona chahiye.</div>
-
-      <label for="password">New Password (6 Digits): <span>*</span></label>
+      <label for="password">Set Password (6 Digits): <span>*</span></label>
       <input type="text" id="password" maxlength="6" pattern="\d{6}" placeholder="123456" disabled required>
 
       <label for="startTime">Start Date & Time (IST): <span>*</span></label>
@@ -139,25 +133,14 @@
       return `${topic}_${trainer}`;
     }
 
-    async function handleSelectionChange() {
+    function handleSelectionChange() {
       const topic = document.getElementById("trainingSelect").value;
       const trainer = document.getElementById("trainerSelect").value;
       const isSelected = !!(topic && trainer);
 
-      const formUrlInput = document.getElementById("formUrl");
       const startTimeInput = document.getElementById("startTime");
       const expiryInput = document.getElementById("expiry");
 
-      if (topic) {
-        if (!cachedConfig) {
-          await fetchCurrentConfig(true);
-        }
-        if (cachedConfig && cachedConfig.topics && cachedConfig.topics[topic] && cachedConfig.topics[topic].form_url) {
-          formUrlInput.value = cachedConfig.topics[topic].form_url;
-        }
-      }
-
-      formUrlInput.disabled = !isSelected;
       document.getElementById("password").disabled = !isSelected;
       startTimeInput.disabled = !isSelected;
       expiryInput.disabled = !isSelected;
@@ -197,7 +180,7 @@
       const liveContent = document.getElementById("liveContent");
 
       if (!silent) {
-        status.textContent = "Fetching Live Config...";
+        status.textContent = "Fetching & Cleaning Live Config...";
         status.className = "status";
       }
 
@@ -207,11 +190,45 @@
 
         if (res.ok) {
           const getData = await res.json();
-          const decodedText = base64ToUtf8(getData.content);
-          cachedConfig = JSON.parse(decodedText);
+          const sha = getData.sha;
+          cachedConfig = JSON.parse(base64ToUtf8(getData.content));
+
+          if (!cachedConfig.trainings || !Array.isArray(cachedConfig.trainings)) {
+            cachedConfig.trainings = [];
+          }
+
+          // Auto-Cleanup: Expired sessions remove karna
+          const nowTime = new Date();
+          const initialCount = cachedConfig.trainings.length;
+
+          const activeTrainings = cachedConfig.trainings.filter(t => {
+            if (!t.expiry) return false;
+            let expDateStr = t.expiry.trim();
+            if (!expDateStr.includes('+') && !expDateStr.includes('Z')) {
+              expDateStr += ":00+05:30";
+            }
+            const exp = new Date(expDateStr);
+            return !isNaN(exp.getTime()) && exp > nowTime;
+          });
+
+          if (activeTrainings.length !== initialCount && token) {
+            cachedConfig.trainings = activeTrainings;
+            const contentEncoded = utf8ToBase64(JSON.stringify(cachedConfig, null, 2));
+
+            fetch(API_URL, {
+              method: "PUT",
+              headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: "Auto-cleaned expired sessions via View Active Sessions",
+                content: contentEncoded,
+                sha: sha
+              })
+            }).catch(err => console.error("Auto-clean error:", err));
+          } else {
+            cachedConfig.trainings = activeTrainings;
+          }
 
           if (!silent) {
-            // Sabse pehle line me VLE attendance link add kiya gaya hai
             let html = `<div class="vle-link-box">
               🔗 <b>Attendance Link for VLEs:</b><br>
               <a href="https://cscchhattisgarh.github.io/training-attendance/" target="_blank">
@@ -219,25 +236,27 @@
               </a>
             </div>`;
 
-            if (cachedConfig.trainings && Array.isArray(cachedConfig.trainings) && cachedConfig.trainings.length > 0) {
+            if (cachedConfig.trainings.length > 0) {
               cachedConfig.trainings.forEach(t => {
                 html += `<div class="training-item">
-                  <strong style="color:#0f766e;">📌 ${t.name || t.id}:</strong><br>
+                  <strong style="color:#0f766e;">📌 ${t.name}:</strong><br>
+                  <b>Type:</b> ${t.topic_id === 'wifi_choupal' ? 'WiFi Choupal (Google Form)' : 'Labour eKYC (Web Form)'}<br>
                   <b>Password:</b> ${t.password || 'N/A'}<br>
                   <b>Start:</b> ${formatISTDisplay(t.start_time)}<br>
                   <b>Expiry:</b> ${formatISTDisplay(t.expiry)}
                 </div>`;
               });
             } else {
-              html += "<div>No active sessions found.</div>";
+              html += "<div style='color: #64748b; padding: 6px 0;'>Koi active session uplabdh nahi hai (sab expire ho chuke hain).</div>";
             }
+
             liveContent.innerHTML = html;
             box.style.display = "block";
-            status.textContent = "✅ Active sessions fetched!";
+            status.textContent = "✅ Active sessions fetched & cleaned!";
             status.className = "status success";
           }
         } else if (!silent) {
-          status.textContent = "❌ Error fetching live config file! Check Token or Permissions.";
+          status.textContent = "❌ Error fetching config! Check Token permissions.";
           status.className = "status error";
         }
       } catch (e) {
@@ -248,39 +267,19 @@
       }
     }
 
-    function isValidGoogleFormEmbedUrl(urlStr) {
-      if (!urlStr.includes("docs.google.com/forms")) {
-        return { valid: false, reason: "Yeh Google Form ki link nahi hai!" };
-      }
-      if (!urlStr.includes("embedded=true")) {
-        return { valid: false, reason: "URL ke aakhri me '?embedded=true' zaroor hona chahiye." };
-      }
-      return { valid: true };
-    }
-
     async function updateConfig() {
       const token = document.getElementById("token").value.trim();
       const topicValue = document.getElementById("trainingSelect").value;
       const uniqueId = generateUniqueId();
-      const topicText = document.getElementById("trainingSelect").options[document.getElementById("trainingSelect").selectedIndex].text;
-      const trainerText = document.getElementById("trainerSelect").options[document.getElementById("trainerSelect").selectedIndex].text;
       
-      const formUrl = document.getElementById("formUrl").value.trim();
       const pwd = document.getElementById("password").value.trim();
       const startVal = document.getElementById("startTime").value;
       const expVal = document.getElementById("expiry").value;
       const status = document.getElementById("status");
       const saveBtn = document.getElementById("saveBtn");
 
-      if (!uniqueId || !token || !formUrl || !pwd || !startVal || !expVal) {
+      if (!uniqueId || !token || !pwd || !startVal || !expVal) {
         status.textContent = "❌ Kripya sabhi mandatory fields bharein!";
-        status.className = "status error";
-        return;
-      }
-
-      const formCheck = isValidGoogleFormEmbedUrl(formUrl);
-      if (!formCheck.valid) {
-        status.textContent = "❌ Galat Form URL! " + formCheck.reason;
         status.className = "status error";
         return;
       }
@@ -291,7 +290,10 @@
         return;
       }
 
-      const sessionName = `${topicText} (${trainerText})`;
+      let sessionName = (topicValue === "labour_ekyc") 
+        ? "Labour eKYC Training Attendance Form" 
+        : "WiFi Choupal Training Attendance Form";
+
       const formattedStart = `${startVal}:00+05:30`;
       const formattedExpiry = `${expVal}:00+05:30`;
 
@@ -310,12 +312,12 @@
 
       localStorage.setItem("gh_pat", token);
       saveBtn.disabled = true;
-      status.textContent = "Updating GitHub Repository...";
+      status.textContent = "Updating & Deploying Session...";
 
       try {
         const getRes = await fetch(API_URL, { headers: { "Authorization": `token ${token}` } });
         let sha = "";
-        let existingConfig = { topics: {}, trainings: [] };
+        let existingConfig = { trainings: [] };
 
         if (getRes.ok) {
           const getData = await getRes.json();
@@ -323,15 +325,21 @@
           existingConfig = JSON.parse(base64ToUtf8(getData.content));
         }
 
-        if (!existingConfig.topics) existingConfig.topics = {};
         if (!existingConfig.trainings || !Array.isArray(existingConfig.trainings)) {
           existingConfig.trainings = [];
         }
 
-        existingConfig.topics[topicValue] = {
-          title: topicText,
-          form_url: formUrl
-        };
+        // Auto-Cleanup: Expired sessions remove karein
+        const nowTime = new Date();
+        existingConfig.trainings = existingConfig.trainings.filter(t => {
+          if (!t.expiry) return false;
+          let expDateStr = t.expiry.trim();
+          if (!expDateStr.includes('+') && !expDateStr.includes('Z')) {
+            expDateStr += ":00+05:30";
+          }
+          const exp = new Date(expDateStr);
+          return !isNaN(exp.getTime()) && exp > nowTime;
+        });
 
         let targetIndex = existingConfig.trainings.findIndex(t => t.id === uniqueId);
         const newEntry = {
@@ -340,8 +348,7 @@
           name: sessionName,
           password: pwd,
           start_time: formattedStart,
-          expiry: formattedExpiry,
-          form_url: formUrl
+          expiry: formattedExpiry
         };
 
         if (targetIndex !== -1) {
@@ -356,14 +363,14 @@
           method: "PUT",
           headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: `Updated session: ${sessionName}`,
+            message: `Deployed: ${sessionName}`,
             content: contentEncoded,
             sha: sha ? sha : undefined
           })
         });
 
         if (putRes.ok) {
-          status.textContent = "✅ Session Successfully Live!";
+          status.textContent = "✅ Session Successfully Live & Deployed!";
           status.className = "status success";
 
           document.getElementById("password").value = "";
