@@ -7,6 +7,14 @@
       "password": "565656",
       "start_time": "2026-10-19T22:38:00+05:30",
       "expiry": "2026-10-19T22:41:00+05:30"
+    },
+    {
+      "id": "wifi_choupal_ravikant_sahu",
+      "topic_id": "wifi_choupal",
+      "name": "WiFi Choupal Training Attendance Form",
+      "password": "908080",
+      "start_time": "2026-10-19T22:39:00+05:30",
+      "expiry": "2026-10-19T22:41:00+05:30"
     }
   ]
 }
