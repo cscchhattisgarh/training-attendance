@@ -1,12 +1,3 @@
 {
-  "trainings": [
-    {
-      "id": "wifi_choupal_rahul_soni",
-      "topic_id": "wifi_choupal",
-      "name": "WiFi Choupal Training Attendance Form",
-      "password": "908967",
-      "start_time": "2026-10-23T14:15:00+05:30",
-      "expiry": "2026-10-23T14:40:00+05:30"
-    }
-  ]
+  "trainings": []
 }
