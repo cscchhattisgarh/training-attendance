@@ -1,20 +1,12 @@
 {
   "trainings": [
     {
-      "id": "labour_ekyc_pushpen_kumar_verma_1793274035788",
+      "id": "labour_ekyc_pushpen_kumar_verma_1793276797824",
       "topic_id": "labour_ekyc",
       "name": "Labour eKYC Training Attendance Form",
-      "password": "563578",
-      "start_time": "2026-10-29T17:10:00+05:30",
-      "expiry": "2026-10-29T17:30:00+05:30"
-    },
-    {
-      "id": "labour_ekyc_krishnandan_kumar_1793274859492",
-      "topic_id": "labour_ekyc",
-      "name": "Labour eKYC Training Attendance Form",
-      "password": "456833",
-      "start_time": "2026-10-29T17:24:00+05:30",
-      "expiry": "2026-10-29T17:40:00+05:30"
+      "password": "783484",
+      "start_time": "2026-10-29T17:56:00+05:30",
+      "expiry": "2026-10-29T18:10:00+05:30"
     }
   ]
 }
