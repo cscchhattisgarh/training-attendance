@@ -37,6 +37,29 @@
     }
     .vle-link-box a { color: #2563eb; font-weight: bold; text-decoration: underline; }
     .training-item { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #cbd5e1; }
+
+    /* Conflict Confirmation Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6); display: none;
+      justify-content: center; align-items: center; z-index: 1000; padding: 20px;
+    }
+    .modal-card {
+      background: white; border-radius: 12px; max-width: 480px; width: 100%;
+      padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header { font-size: 18px; font-weight: bold; color: #b45309; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .conflict-details {
+      background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px;
+      padding: 12px 14px; font-size: 13px; color: #92400e; margin: 12px 0; line-height: 1.6;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-cancel { background: #64748b; color: white; }
+    .btn-overwrite { background: #dc2626; color: white; }
   </style>
 </head>
 <body>
@@ -44,7 +67,7 @@
   <div class="card">
     <h2>⚙️ CSC Attendance Admin Panel</h2>
 
-    <form id="adminForm" onsubmit="event.preventDefault(); updateConfig();">
+    <form id="adminForm" onsubmit="event.preventDefault(); validateAndPrompt();">
       <label for="token">GitHub Personal Access Token (PAT): <span>*</span></label>
       <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" required>
 
@@ -93,6 +116,31 @@
     </div>
   </div>
 
+  <!-- Existing Session Overwrite Confirmation Popup -->
+  <div class="modal-overlay" id="conflictModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        ⚠️ Existing Training Session Found
+      </div>
+      <p style="font-size: 14px; color: #334155; margin: 0;">
+        Is trainer ke liye is topic par pehle se ek session active hai:
+      </p>
+
+      <div class="conflict-details" id="conflictDetailsBox">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <p style="font-size: 13px; color: #475569; margin: 0;">
+        <b>Is session me aapka ek training already assigned hai.</b> Kya aap use <u>overwrite</u> karke is naye session ko active karna chahte hain ya naya time set karna chahte hain?
+      </p>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeConflictModal()">Nahi, Naya Time Set Karein</button>
+        <button type="button" class="btn-overwrite" onclick="proceedWithOverwrite()">Haan, Overwrite Karein</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const GITHUB_USERNAME = "cscchhattisgarh"; 
     const REPO_NAME = "labour-ekcy-training-attendance"; 
@@ -100,6 +148,7 @@
     const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${FILE_PATH}`;
 
     let cachedConfig = null;
+    let pendingOverwriteId = null;
 
     function utf8ToBase64(str) {
       const bytes = new TextEncoder().encode(str);
@@ -124,13 +173,6 @@
     function getCurrentDateTimeLocal() {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    }
-
-    function generateUniqueId() {
-      const topic = document.getElementById("trainingSelect").value;
-      const trainer = document.getElementById("trainerSelect").value;
-      if (!topic || !trainer) return "";
-      return `${topic}_${trainer}`;
     }
 
     function handleSelectionChange() {
@@ -197,7 +239,6 @@
             cachedConfig.trainings = [];
           }
 
-          // Auto-Cleanup: Expired sessions remove karna
           const nowTime = new Date();
           const initialCount = cachedConfig.trainings.length;
 
@@ -240,7 +281,7 @@
               cachedConfig.trainings.forEach(t => {
                 html += `<div class="training-item">
                   <strong style="color:#0f766e;">📌 ${t.name}:</strong><br>
-                  <b>Type:</b> ${t.topic_id === 'wifi_choupal' ? 'WiFi Choupal (Google Form)' : 'Labour eKYC (Web Form)'}<br>
+                  <b>Topic:</b> ${t.topic_id === 'wifi_choupal' ? 'WiFi Choupal (Google Form)' : 'Labour eKYC (Web Form)'}<br>
                   <b>Password:</b> ${t.password || 'N/A'}<br>
                   <b>Start:</b> ${formatISTDisplay(t.start_time)}<br>
                   <b>Expiry:</b> ${formatISTDisplay(t.expiry)}
@@ -267,18 +308,34 @@
       }
     }
 
-    async function updateConfig() {
+    // Modal Control Functions
+    function closeConflictModal() {
+      document.getElementById("conflictModal").style.display = "none";
+      pendingOverwriteId = null;
+      document.getElementById("saveBtn").disabled = false;
+      document.getElementById("status").textContent = "ℹ️ Please select a different time slot.";
+      document.getElementById("status").className = "status";
+      document.getElementById("startTime").focus();
+    }
+
+    function proceedWithOverwrite() {
+      document.getElementById("conflictModal").style.display = "none";
+      executeSaveSession(pendingOverwriteId);
+    }
+
+    // Step 1: Pre-check if an active session already exists for this Trainer & Topic
+    // Step 1: TIME OVERLAP CHECK (Sirf tabhi popup aayega jab time aapas me takraye)
+    async function validateAndPrompt() {
       const token = document.getElementById("token").value.trim();
       const topicValue = document.getElementById("trainingSelect").value;
-      const uniqueId = generateUniqueId();
-      
+      const trainerValue = document.getElementById("trainerSelect").value;
       const pwd = document.getElementById("password").value.trim();
       const startVal = document.getElementById("startTime").value;
       const expVal = document.getElementById("expiry").value;
       const status = document.getElementById("status");
       const saveBtn = document.getElementById("saveBtn");
 
-      if (!uniqueId || !token || !pwd || !startVal || !expVal) {
+      if (!token || !topicValue || !trainerValue || !pwd || !startVal || !expVal) {
         status.textContent = "❌ Kripya sabhi mandatory fields bharein!";
         status.className = "status error";
         return;
@@ -290,6 +347,96 @@
         return;
       }
 
+      const formattedStart = `${startVal}:00+05:30`;
+      const formattedExpiry = `${expVal}:00+05:30`;
+      const newStartTime = new Date(formattedStart);
+      const newExpiryTime = new Date(formattedExpiry);
+
+      const nowBuffer = new Date(Date.now() - 2 * 60 * 1000);
+      if (newStartTime < nowBuffer) {
+        status.textContent = "❌ Start Date & Time aane wale samay ka hona chahiye!";
+        status.className = "status error";
+        return;
+      }
+
+      if (newStartTime >= newExpiryTime) {
+        status.textContent = "❌ Expiry Date/Time Start Date/Time ke baad ka hona chahiye!";
+        status.className = "status error";
+        return;
+      }
+
+      saveBtn.disabled = true;
+      status.textContent = "Checking time slot availability...";
+      status.className = "status";
+
+      try {
+        const headers = token ? { "Authorization": `token ${token}` } : {};
+        const res = await fetch(API_URL + '?_=' + Date.now(), { headers });
+
+        if (!res.ok) {
+          executeSaveSession(null);
+          return;
+        }
+
+        const getData = await res.json();
+        const config = JSON.parse(base64ToUtf8(getData.content));
+        const now = new Date();
+
+        const activeSessions = (config.trainings || []).filter(t => {
+          if (!t.expiry) return false;
+          let expDateStr = t.expiry.trim();
+          if (!expDateStr.includes('+') && !expDateStr.includes('Z')) expDateStr += ":00+05:30";
+          const exp = new Date(expDateStr);
+          return !isNaN(exp.getTime()) && exp > now;
+        });
+
+        const prefix = `${topicValue}_${trainerValue}`;
+        
+        // Exact Overlap Check: Dono time range aapas me cross ho rahi hain ya nahi
+        const overlappingSession = activeSessions.find(t => {
+          if (!t.id || !t.id.startsWith(prefix)) return false;
+
+          let sStr = t.start_time.trim();
+          let eStr = t.expiry.trim();
+          if (!sStr.includes('+') && !sStr.includes('Z')) sStr += ":00+05:30";
+          if (!eStr.includes('+') && !eStr.includes('Z')) eStr += ":00+05:30";
+
+          const existingStart = new Date(sStr);
+          const existingExpiry = new Date(eStr);
+
+          // Overlap condition: (StartA < ExpiryB) AND (ExpiryA > StartB)
+          return (newStartTime < existingExpiry && newExpiryTime > existingStart);
+        });
+
+        if (overlappingSession) {
+          pendingOverwriteId = overlappingSession.id;
+          document.getElementById("conflictDetailsBox").innerHTML = `
+            <b>Topic:</b> ${overlappingSession.name}<br>
+            <b>Password:</b> ${overlappingSession.password}<br>
+            <b>Start Time:</b> ${formatISTDisplay(overlappingSession.start_time)}<br>
+            <b>Expiry Time:</b> ${formatISTDisplay(overlappingSession.expiry)}
+          `;
+          document.getElementById("conflictModal").style.display = "flex";
+          status.textContent = "";
+        } else {
+          // Time alag hai, bina kisi popup ke direct save hoga!
+          executeSaveSession(null);
+        }
+      } catch (err) {
+        executeSaveSession(null);
+      }
+    }
+    // Step 2: Final Save to GitHub (Overwrite if ID provided, else Append fresh)
+    async function executeSaveSession(overwriteTargetId) {
+      const token = document.getElementById("token").value.trim();
+      const topicValue = document.getElementById("trainingSelect").value;
+      const trainerValue = document.getElementById("trainerSelect").value;
+      const pwd = document.getElementById("password").value.trim();
+      const startVal = document.getElementById("startTime").value;
+      const expVal = document.getElementById("expiry").value;
+      const status = document.getElementById("status");
+      const saveBtn = document.getElementById("saveBtn");
+
       let sessionName = (topicValue === "labour_ekyc") 
         ? "Labour eKYC Training Attendance Form" 
         : "WiFi Choupal Training Attendance Form";
@@ -297,22 +444,10 @@
       const formattedStart = `${startVal}:00+05:30`;
       const formattedExpiry = `${expVal}:00+05:30`;
 
-      const nowBuffer = new Date(Date.now() - 2 * 60 * 1000);
-      if (new Date(formattedStart) < nowBuffer) {
-        status.textContent = "❌ Start Date & Time aane wale samay ka hona chahiye!";
-        status.className = "status error";
-        return;
-      }
-
-      if (new Date(formattedStart) >= new Date(formattedExpiry)) {
-        status.textContent = "❌ Expiry Date/Time Start Date/Time ke baad ka hona chahiye!";
-        status.className = "status error";
-        return;
-      }
-
       localStorage.setItem("gh_pat", token);
       saveBtn.disabled = true;
-      status.textContent = "Updating & Deploying Session...";
+      status.textContent = overwriteTargetId ? "Overwriting previous session..." : "Updating & Deploying Session...";
+      status.className = "status";
 
       try {
         const getRes = await fetch(API_URL, { headers: { "Authorization": `token ${token}` } });
@@ -329,21 +464,18 @@
           existingConfig.trainings = [];
         }
 
-        // Auto-Cleanup: Expired sessions remove karein
         const nowTime = new Date();
         existingConfig.trainings = existingConfig.trainings.filter(t => {
           if (!t.expiry) return false;
           let expDateStr = t.expiry.trim();
-          if (!expDateStr.includes('+') && !expDateStr.includes('Z')) {
-            expDateStr += ":00+05:30";
-          }
+          if (!expDateStr.includes('+') && !expDateStr.includes('Z')) expDateStr += ":00+05:30";
           const exp = new Date(expDateStr);
           return !isNaN(exp.getTime()) && exp > nowTime;
         });
 
-        let targetIndex = existingConfig.trainings.findIndex(t => t.id === uniqueId);
+        const newId = `${topicValue}_${trainerValue}_${Date.now()}`;
         const newEntry = {
-          id: uniqueId,
+          id: newId,
           topic_id: topicValue,
           name: sessionName,
           password: pwd,
@@ -351,8 +483,13 @@
           expiry: formattedExpiry
         };
 
-        if (targetIndex !== -1) {
-          existingConfig.trainings[targetIndex] = newEntry;
+        if (overwriteTargetId) {
+          const targetIndex = existingConfig.trainings.findIndex(t => t.id === overwriteTargetId);
+          if (targetIndex !== -1) {
+            existingConfig.trainings[targetIndex] = newEntry;
+          } else {
+            existingConfig.trainings.push(newEntry);
+          }
         } else {
           existingConfig.trainings.push(newEntry);
         }
@@ -363,7 +500,7 @@
           method: "PUT",
           headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: `Deployed: ${sessionName}`,
+            message: `Deployed: ${sessionName} (Trainer: ${trainerValue})`,
             content: contentEncoded,
             sha: sha ? sha : undefined
           })
@@ -388,6 +525,7 @@
         status.className = "status error";
       } finally {
         saveBtn.disabled = false;
+        pendingOverwriteId = null;
       }
     }
   </script>
