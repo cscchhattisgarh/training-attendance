@@ -65,6 +65,33 @@
     .field-hint { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-top: 4px; }
     .field-error { color: #dc2626; font-size: 12px; margin-top: 4px; display: none; }
 
+    /* Receipt Slip Styling */
+    #receiptCard {
+      display: none; width: 92%; max-width: 500px; background: #ffffff;
+      border-radius: 16px; padding: 30px 25px; box-shadow: 0 5px 25px rgba(0,0,0,0.12);
+      margin: 30px auto; text-align: center; border-top: 6px solid #16a34a;
+    }
+    .receipt-table { width: 100%; border-collapse: collapse; margin: 20px 0; text-align: left; font-size: 14px; }
+    .receipt-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; }
+    .receipt-table td.label-col { font-weight: bold; color: #64748b; width: 40%; }
+    .receipt-table td.val-col { color: #1e293b; font-weight: 600; }
+    .ref-badge {
+      display: inline-block; background: #dcfce7; color: #15803d;
+      padding: 6px 14px; border-radius: 20px; font-size: 17px; font-weight: bold;
+      letter-spacing: 1px; border: 1px dashed #16a34a;
+    }
+
+    /* Verification Box on Home */
+    .status-check-box {
+      margin-top: 25px; padding-top: 20px; border-top: 1px dashed #cbd5e1;
+    }
+    .toggle-link {
+      color: #2563eb; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: underline;
+    }
+    #statusLookupPanel {
+      display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;
+    }
+
     /* Google Form Container */
     #formContainer { display: none; width: 100%; min-height: 100vh; background: #ffffff; }
     #googleForm { width: 100%; height: 100vh; min-height: 800px; border: none; display: block; }
@@ -107,7 +134,20 @@
     </form>
 
     <div id="message" class="message"></div>
-    <div style="margin-top: 25px; font-size: 12px; color: #9ca3af;">CSC State Office</div>
+
+    <!-- Self-Verification / Check My Attendance -->
+    <div class="status-check-box">
+      <span class="toggle-link" onclick="toggleStatusPanel()">🔍 Check My Attendance Status</span>
+      
+      <div id="statusLookupPanel">
+        <label for="checkCscId" style="font-size: 12px;">अपना 12 अंकों का CSC ID दर्ज करें:</label>
+        <input type="text" id="checkCscId" class="form-control" maxlength="12" inputmode="numeric" placeholder="Enter CSC ID">
+        <button type="button" onclick="verifyAttendanceStatus()" style="padding: 10px; font-size: 13px; background: #0f766e; margin-top: 8px;">Check Status</button>
+        <div id="statusResult" style="margin-top: 10px; font-size: 12px; font-weight: bold; text-align: left; line-height: 1.5;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; font-size: 12px; color: #9ca3af;">CSC State Office Chhattisgarh</div>
   </div>
 
   <!-- 1. Custom Webpage Form (For Labour eKYC) -->
@@ -122,6 +162,7 @@
       <div class="form-group">
         <label for="email">Email Address *</label>
         <input type="email" id="email" class="form-control" placeholder="example@gmail.com" required>
+        <div class="field-hint"><span>रसीद इस ईमेल पते पर भेजी जाएगी</span></div>
       </div>
 
       <div class="form-group">
@@ -184,6 +225,29 @@
       <button type="submit" id="submitFormBtn">Submit Attendance</button>
     </form>
     <div id="formSubmissionMsg" class="message"></div>
+  </div>
+
+  <!-- Digital Receipt Slip (After Successful Submission) -->
+  <div id="receiptCard">
+    <div style="font-size: 45px; color: #16a34a;">✅</div>
+    <h2 style="color: #16a34a; margin: 6px 0;">उपस्थिति सफलतापूर्वक दर्ज हुई!</h2>
+    <p style="font-size: 13px; color: #64748b; margin: 0 0 15px;">Official Training Attendance Slip</p>
+
+    <div class="ref-badge" id="receiptRefId">CSC-CG-XXXXXX</div>
+
+    <table class="receipt-table">
+      <tr><td class="label-col">CSC ID:</td><td class="val-col" id="receiptCscId">--</td></tr>
+      <tr><td class="label-col">VLE Name:</td><td class="val-col" id="receiptName">--</td></tr>
+      <tr><td class="label-col">District / Block:</td><td class="val-col" id="receiptDistBlock">--</td></tr>
+      <tr><td class="label-col">Date & Time:</td><td class="val-col" id="receiptTime">--</td></tr>
+    </table>
+
+    <div style="background: #f0fdf4; border: 1px dashed #86efac; border-radius: 8px; padding: 10px; font-size: 12px; color: #166534; margin-bottom: 15px;">
+      📸 <b>कृपया इस रसीद का स्क्रीनशॉट ले लें!</b><br>
+      भविष्य में उपस्थिति सत्यापन हेतु केवल यही मान्य होगा।
+    </div>
+
+    <button type="button" onclick="window.print()" style="background: #16a34a; padding: 12px;">🖨️ Print / Save PDF</button>
   </div>
 
   <!-- 2. Secure Embedded Google Form (For WiFi Choupal) -->
@@ -279,6 +343,45 @@
         }
       } else {
         err.style.display = "none";
+      }
+    }
+
+    // Toggle Self Check Status
+    function toggleStatusPanel() {
+      const p = document.getElementById("statusLookupPanel");
+      p.style.display = (p.style.display === "block") ? "none" : "block";
+    }
+
+    async function verifyAttendanceStatus() {
+      const cscId = document.getElementById("checkCscId").value.trim();
+      const resDiv = document.getElementById("statusResult");
+
+      if (cscId.length !== 12) {
+        resDiv.innerHTML = "<span style='color:#dc2626;'>Kripya 12-digit CSC ID darj karein!</span>";
+        return;
+      }
+
+      resDiv.innerHTML = "<span style='color:#2563eb;'>Verifying record with database...</span>";
+
+      try {
+        const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=checkStatus&cscId=${cscId}`);
+        const data = await res.json();
+
+        if (data.found) {
+          resDiv.innerHTML = `
+            <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 6px; border: 1px solid #86efac;">
+              ✅ <b>Attendance Found!</b><br>
+              <b>Name:</b> ${data.name}<br>
+              <b>District:</b> ${data.district} (${data.block})<br>
+              <b>Submitted:</b> ${data.timestamp}<br>
+              <b>Ref ID:</b> ${data.refId}
+            </div>
+          `;
+        } else {
+          resDiv.innerHTML = `<span style='color:#dc2626;'>❌ ${data.message}</span>`;
+        }
+      } catch (err) {
+        resDiv.innerHTML = "<span style='color:#dc2626;'>Server connection error! Dobara try karein.</span>";
       }
     }
 
@@ -413,16 +516,14 @@
         return;
       }
 
-      // Password Success: ROUTING BASED ON TOPIC
+      // Password Success: ROUTING
       passwordContainer.style.display = "none";
 
       if (activeSession.topic_id === "wifi_choupal") {
-        // WiFi Choupal: Load Google Form via Secure Backend Proxy
         googleForm.src = `${SCRIPT_WEB_APP_URL}?action=loadWifiForm`;
         formContainer.style.display = "block";
         document.body.style.background = "#ffffff";
       } else {
-        // Labour eKYC: Load Custom Web Form
         initDistricts();
         document.getElementById("activeSessionHeader").textContent = activeSession.name || "Labour eKYC Attendance Form";
         formWrapper.style.display = "block";
@@ -430,7 +531,7 @@
       }
     });
 
-    // Form Submit Handler (Labour eKYC)
+    // Form Submit Handler
     document.getElementById("attendanceForm").addEventListener("submit", function(e) {
       e.preventDefault();
 
@@ -444,7 +545,6 @@
         return;
       }
 
-      // 9th & 10th '00' and 11th '1'
       if (cscId.charAt(8) !== '0' || cscId.charAt(9) !== '0' || cscId.charAt(10) !== '1') {
         alert("अमान्य CSC ID! 9th और 10th digit '00' तथा 11th digit '1' होना अनिवार्य है।");
         return;
@@ -456,7 +556,7 @@
       }
 
       submitBtn.disabled = true;
-      submitBtn.textContent = "Checking & Submitting...";
+      submitBtn.textContent = "Generating Receipt & Submitting...";
       msg.textContent = "";
 
       const payload = {
@@ -480,12 +580,15 @@
           submitBtn.disabled = false;
           submitBtn.textContent = "Submit Attendance";
         } else if (data.success) {
-          alert("✅ आपकी Attendance सफलतापूर्वक दर्ज हो गई है!");
-          document.getElementById("attendanceForm").reset();
-          document.getElementById("block").disabled = true;
-          document.getElementById("cscCounter").textContent = "0/12";
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Submit Attendance";
+          // Hide Form & Show Digital Receipt Card
+          formWrapper.style.display = "none";
+          document.getElementById("receiptRefId").textContent = data.refId;
+          document.getElementById("receiptCscId").textContent = data.cscId;
+          document.getElementById("receiptName").textContent = data.name;
+          document.getElementById("receiptDistBlock").textContent = `${data.district} / ${data.block}`;
+          document.getElementById("receiptTime").textContent = data.timestamp;
+
+          document.getElementById("receiptCard").style.display = "block";
         } else {
           alert("Error: " + (data.error || "Submission Failed"));
           submitBtn.disabled = false;
