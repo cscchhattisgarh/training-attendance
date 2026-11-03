@@ -77,8 +77,8 @@
     .receipt-table td.val-col { color: #1e293b; font-weight: 600; }
     .ref-badge {
       display: inline-block; background: #dcfce7; color: #15803d;
-      padding: 6px 14px; border-radius: 20px; font-size: 17px; font-weight: bold;
-      letter-spacing: 1px; border: 1px dashed #16a34a;
+      padding: 6px 14px; border-radius: 20px; font-size: 16px; font-weight: bold;
+      letter-spacing: 1px; border: 1px dashed #16a34a; word-break: break-all;
     }
 
     /* Verification Box on Home */
@@ -315,7 +315,6 @@
           const opt = document.createElement("option");
           opt.value = b;
           opt.textContent = b;
-          blkSelect.appendChild(opt);
         });
         blkSelect.disabled = false;
       } else {
@@ -364,8 +363,16 @@
       resDiv.innerHTML = "<span style='color:#2563eb;'>Verifying record with database...</span>";
 
       try {
-        const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=checkStatus&cscId=${cscId}`);
-        const data = await res.json();
+        const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=checkStatus&cscId=${encodeURIComponent(cscId)}`);
+        const textData = await res.text();
+        
+        let data;
+        try {
+          data = JSON.parse(textData);
+        } catch (jsonErr) {
+          resDiv.innerHTML = `<span style='color:#dc2626;'>Server Error: Apps Script deploy check karein.</span>`;
+          return;
+        }
 
         if (data.found) {
           resDiv.innerHTML = `
@@ -381,8 +388,21 @@
           resDiv.innerHTML = `<span style='color:#dc2626;'>❌ ${data.message}</span>`;
         }
       } catch (err) {
-        resDiv.innerHTML = "<span style='color:#dc2626;'>Server connection error! Dobara try karein.</span>";
+        resDiv.innerHTML = "<span style='color:#dc2626;'>Network Error! Internet check karein.</span>";
       }
+    }
+
+    // Helper: Trainer Initials (e.g. pushpen_kumar_verma -> PK, neeraj_hardev -> NH)
+    function extractTrainerInitials(sessionId) {
+      if (!sessionId) return "CG";
+      const parts = sessionId.split("_");
+      // parts[0] is topic (labour or wifi), parts[1] is firstName, parts[2] is middle/lastName
+      if (parts.length >= 3 && parts[1] && parts[2]) {
+        return (parts[1][0] + parts[2][0]).toUpperCase();
+      } else if (parts.length >= 2 && parts[1]) {
+        return parts[1].substring(0, 2).toUpperCase();
+      }
+      return "CG";
     }
 
     // GitHub Config Fetching
@@ -390,6 +410,8 @@
     const REPO_NAME = "labour-ekcy-training-attendance"; 
     const FILE_PATH = "config.json"; 
     const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${FILE_PATH}`;
+
+    let activeSessionGlobal = null;
 
     const passwordForm = document.getElementById("passwordForm");
     const passwordInput = document.getElementById("password");
@@ -516,6 +538,8 @@
         return;
       }
 
+      activeSessionGlobal = activeSession;
+
       // Password Success: ROUTING
       passwordContainer.style.display = "none";
 
@@ -559,6 +583,9 @@
       submitBtn.textContent = "Generating Receipt & Submitting...";
       msg.textContent = "";
 
+      const currentTopicCode = (activeSessionGlobal && activeSessionGlobal.topic_id === "wifi_choupal") ? "W" : "L";
+      const trainerInitials = extractTrainerInitials(activeSessionGlobal ? activeSessionGlobal.id : "");
+
       const payload = {
         email: document.getElementById("email").value.trim(),
         district: document.getElementById("district").value,
@@ -566,7 +593,9 @@
         gpWard: document.getElementById("gpWard").value.trim(),
         cscId: cscId,
         name: document.getElementById("vleName").value.trim(),
-        mobile: mobile
+        mobile: mobile,
+        topicCode: currentTopicCode,
+        trainerInitials: trainerInitials
       };
 
       fetch(SCRIPT_WEB_APP_URL, {
