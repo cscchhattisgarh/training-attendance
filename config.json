@@ -1,12 +1,3 @@
 {
-  "trainings": [
-    {
-      "id": "labour_ekyc_pushpen_kumar_verma_1793707355172",
-      "topic_id": "labour_ekyc",
-      "name": "Labour eKYC Training Attendance Form",
-      "password": "909090",
-      "start_time": "2026-11-03T17:32:00+05:30",
-      "expiry": "2026-11-03T17:40:00+05:30"
-    }
-  ]
+  "trainings": []
 }
