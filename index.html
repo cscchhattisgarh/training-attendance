@@ -395,17 +395,36 @@
     }
 
     // Helper: Trainer Initials (e.g. pushpen_kumar_verma -> PK, neeraj_hardev -> NH)
-    function extractTrainerInitials(sessionId) {
-      if (!sessionId) return "CG";
-      const parts = sessionId.split("_");
-      if (parts.length >= 3 && parts[1] && parts[2]) {
-        return (parts[1][0] + parts[2][0]).toUpperCase();
-      } else if (parts.length >= 2 && parts[1]) {
-        return parts[1].substring(0, 2).toUpperCase();
+    // Trainer Name se exact initials nikalne ka sahi tarika (e.g. "Pushpen Kumar" -> "PK")
+    function extractTrainerInitials(session) {
+      if (!session) return "CG";
+
+      // 1. Agar session me direct trainer_name hai
+      const fullName = (session.trainer_name || session.trainer || "").trim();
+      if (fullName) {
+        const words = fullName.split(/\s+/);
+        if (words.length >= 2) {
+          return (words[0][0] + words[1][0]).toUpperCase();
+        } else if (words.length === 1 && words[0].length >= 2) {
+          return words[0].substring(0, 2).toUpperCase();
+        }
       }
+
+      // 2. Fallback: Agar session.id se nikalna pade (Topic words chhodkar)
+      if (session.id) {
+        const parts = session.id.split("_");
+        // Topic words ('labour', 'ekyc', 'wifi', 'choupal') ko filter kar dein
+        const nameParts = parts.filter(p => !['labour', 'ekyc', 'wifi', 'choupal'].includes(p.toLowerCase()) && isNaN(p));
+        
+        if (nameParts.length >= 2) {
+          return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+        } else if (nameParts.length === 1) {
+          return nameParts[0].substring(0, 2).toUpperCase();
+        }
+      }
+
       return "CG";
     }
-
     // GitHub Config Fetching
     const GITHUB_USERNAME = "cscchhattisgarh"; 
     const REPO_NAME = "labour-ekcy-training-attendance"; 
@@ -589,8 +608,7 @@
         : "Labour eKYC Training";
 
       const currentTopicCode = (activeSessionGlobal && activeSessionGlobal.topic_id === "wifi_choupal") ? "W" : "L";
-      const trainerInitials = extractTrainerInitials(activeSessionGlobal ? activeSessionGlobal.id : "");
-
+      const trainerInitials = extractTrainerInitials(activeSessionGlobal);
       const payload = {
         email: document.getElementById("email").value.trim(),
         district: document.getElementById("district").value,
