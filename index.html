@@ -314,14 +314,59 @@
       }
     }
 
-    // CSC ID Validation & Auto-Prefill Check
+    // Helper: Sabhi input fields ko freeze ya unfreeze karna
+    function setFormInputsState(disabled) {
+      const fieldIds = ["vleName", "district", "block", "gpWard", "mobile", "email", "submitFormBtn"];
+      fieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+      });
+    }
+
+    // Helper: Sabhi locked badges aur fields ko reset/unlock karna
+    function unlockAllFields() {
+      document.getElementById("prefillAlert").style.display = "none";
+      document.getElementById("submitFormBtn").disabled = false;
+
+      ["vleName", "gpWard", "mobile", "email"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.readOnly = false;
+          el.disabled = false;
+        }
+      });
+      
+      const distEl = document.getElementById("district");
+      if (distEl) distEl.disabled = false;
+      
+      const blkEl = document.getElementById("block");
+      if (blkEl) blkEl.disabled = (distEl.value === "");
+
+      ["nameBadge", "distBadge", "blockBadge", "gpBadge", "mobBadge", "emailBadge"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+    }
+
+    // CSC ID Validation, Dynamic Freeze & Intelligent Pre-fill
     async function handleCscInput(input) {
       input.value = input.value.replace(/[^0-9]/g, '');
       const val = input.value;
       const counter = document.getElementById("cscCounter");
       const err = document.getElementById("cscError");
       const statusMsg = document.getElementById("cscStatusMsg");
+      const alertBox = document.getElementById("prefillAlert");
+      const submitBtn = document.getElementById("submitFormBtn");
+
       counter.textContent = `${val.length}/12`;
+
+      if (val.length < 12) {
+        err.style.display = "none";
+        statusMsg.textContent = "Rule: 9th & 10th '00', 11th '1'";
+        statusMsg.style.color = "#6b7280";
+        unlockAllFields();
+        return;
+      }
 
       if (val.length === 12) {
         const ninth = val.charAt(8);
@@ -331,117 +376,143 @@
         if (ninth !== '0' || tenth !== '0' || eleventh !== '1') {
           err.textContent = "अमान्य CSC ID: 9th और 10th digit '00' तथा 11th digit '1' होना चाहिए!";
           err.style.display = "block";
+          unlockAllFields();
+          submitBtn.disabled = true;
           return;
         } else {
           err.style.display = "none";
         }
 
-        // Fetch existing data for prefill and auto-lock
-        statusMsg.textContent = "Checking records...";
+        // STEP 1: Temporary Freeze during verification
+        setFormInputsState(true);
+        statusMsg.textContent = "⏳ रिकॉर्ड्स की जाँच की जा रही है, कृपया प्रतीक्षा करें...";
         statusMsg.style.color = "#2563eb";
 
         try {
           const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=fetchVleData&cscId=${val}`);
           const result = await res.json();
 
+          // Unlock general state
+          setFormInputsState(false);
+
           if (result.found) {
             const d = result.data;
-            const alertBox = document.getElementById("prefillAlert");
-            const submitBtn = document.getElementById("submitFormBtn");
 
-            // 1. Agar saare fields pehle se bhare hain -> Lock submit and alert
+            // Scenario A: Saare fields pehle se bhare hue hain
             if (result.isComplete) {
               alertBox.style.display = "block";
               alertBox.style.background = "#fee2e2";
               alertBox.style.color = "#991b1b";
               alertBox.style.border = "1px solid #f87171";
               alertBox.innerHTML = "⚠️ <b>आपकी Attendance पहले ही पूर्ण रूप से दर्ज हो चुकी है!</b>";
-              submitBtn.disabled = true;
+              
+              setFormInputsState(true);
+              statusMsg.textContent = "Attendance Already Completed";
+              statusMsg.style.color = "#dc2626";
               return;
             }
 
-            // 2. Agar kuch fields bhare hain (7000 VLEs) -> Prefill and Lock filled ones
-            alertBox.style.display = "block";
-            alertBox.style.background = "#eff6ff";
-            alertBox.style.color = "#1e40af";
-            alertBox.style.border = "1px solid #93c5fd";
-            alertBox.innerHTML = "ℹ️ आपका पुराना विवरण लोड कर लिया गया है। कृपया केवल <b>Email / Mobile</b> दर्ज करें।";
-            submitBtn.disabled = false;
+            // Scenario B: Partial Data (Missing fields track karein)
+            const missingFields = [];
 
-            if (d.name) {
-              document.getElementById("vleName").value = d.name;
-              document.getElementById("vleName").readOnly = true;
+            // Name
+            if (d.name && d.name.trim() !== "") {
+              const nameEl = document.getElementById("vleName");
+              nameEl.value = d.name;
+              nameEl.readOnly = true;
               document.getElementById("nameBadge").style.display = "inline";
+            } else {
+              document.getElementById("vleName").readOnly = false;
+              document.getElementById("nameBadge").style.display = "none";
+              missingFields.push("Full Name");
             }
-            if (d.district) {
-              document.getElementById("district").value = d.district;
-              document.getElementById("district").disabled = true;
+
+            // District & Block
+            if (d.district && d.district.trim() !== "") {
+              const distEl = document.getElementById("district");
+              distEl.value = d.district;
+              distEl.disabled = true;
               document.getElementById("distBadge").style.display = "inline";
+
               populateBlocks(d.block);
-              if (d.block) {
-                document.getElementById("block").disabled = true;
+              if (d.block && d.block.trim() !== "") {
+                const blkEl = document.getElementById("block");
+                blkEl.disabled = true;
                 document.getElementById("blockBadge").style.display = "inline";
+              } else {
+                document.getElementById("block").disabled = false;
+                document.getElementById("blockBadge").style.display = "none";
+                missingFields.push("Block");
               }
+            } else {
+              document.getElementById("district").disabled = false;
+              document.getElementById("district").value = "";
+              document.getElementById("distBadge").style.display = "none";
+              document.getElementById("block").disabled = true;
+              document.getElementById("blockBadge").style.display = "none";
+              missingFields.push("District", "Block");
             }
-            if (d.gpWard) {
-              document.getElementById("gpWard").value = d.gpWard;
-              document.getElementById("gpWard").readOnly = true;
+
+            // Gram Panchayat
+            if (d.gpWard && d.gpWard.trim() !== "") {
+              const gpEl = document.getElementById("gpWard");
+              gpEl.value = d.gpWard;
+              gpEl.readOnly = true;
               document.getElementById("gpBadge").style.display = "inline";
+            } else {
+              document.getElementById("gpWard").readOnly = false;
+              document.getElementById("gpBadge").style.display = "none";
+              missingFields.push("Gram Panchayat / Ward");
             }
-            if (d.mobile) {
-              document.getElementById("mobile").value = d.mobile;
-              document.getElementById("mobile").readOnly = true;
+
+            // Mobile
+            if (d.mobile && d.mobile.trim() !== "") {
+              const mobEl = document.getElementById("mobile");
+              mobEl.value = d.mobile;
+              mobEl.readOnly = true;
               document.getElementById("mobBadge").style.display = "inline";
             } else {
               document.getElementById("mobile").readOnly = false;
               document.getElementById("mobBadge").style.display = "none";
+              missingFields.push("Mobile Number");
             }
 
-            // Email mostly blank hoga unka -> keep editable
-            if (d.email) {
-              document.getElementById("email").value = d.email;
-              document.getElementById("email").readOnly = true;
+            // Email
+            if (d.email && d.email.trim() !== "") {
+              const emEl = document.getElementById("email");
+              emEl.value = d.email;
+              emEl.readOnly = true;
               document.getElementById("emailBadge").style.display = "inline";
             } else {
               document.getElementById("email").readOnly = false;
               document.getElementById("emailBadge").style.display = "none";
-              document.getElementById("email").focus();
+              missingFields.push("Email Address");
             }
 
+            // Dynamic Hindi Notice with exact missing fields
+            alertBox.style.display = "block";
+            alertBox.style.background = "#eff6ff";
+            alertBox.style.color = "#1e40af";
+            alertBox.style.border = "1px solid #93c5fd";
+            alertBox.innerHTML = `ℹ️ आपका पुराना विवरण लोड कर लिया गया है। कृपया केवल <b>${missingFields.join(" / ")}</b> दर्ज करें।`;
+            
+            submitBtn.disabled = false;
             statusMsg.textContent = "Data auto-populated!";
             statusMsg.style.color = "#16a34a";
 
           } else {
-            // Fresh VLE: Sab fields open rakho
+            // Scenario C: Fresh VLE
             unlockAllFields();
             statusMsg.textContent = "New VLE - Fill all details";
-            statusMsg.style.color = "#6b7280";
+            statusMsg.style.color = "#16a34a";
           }
-        } catch (e) {
-          statusMsg.textContent = "Rule: 9th & 10th '00', 11th '1'";
+        } catch (fetchErr) {
+          setFormInputsState(false);
+          unlockAllFields();
+          statusMsg.textContent = "Network issue. Please fill manually.";
+          statusMsg.style.color = "#d97706";
         }
-
-      } else {
-        err.style.display = "none";
-        statusMsg.textContent = "Rule: 9th & 10th '00', 11th '1'";
-        statusMsg.style.color = "#6b7280";
       }
-    }
-
-    function unlockAllFields() {
-      document.getElementById("prefillAlert").style.display = "none";
-      document.getElementById("submitFormBtn").disabled = false;
-
-      ["vleName", "gpWard", "mobile", "email"].forEach(id => {
-        const el = document.getElementById(id);
-        el.readOnly = false;
-      });
-      document.getElementById("district").disabled = false;
-      document.getElementById("block").disabled = false;
-
-      ["nameBadge", "distBadge", "blockBadge", "gpBadge", "mobBadge", "emailBadge"].forEach(id => {
-        document.getElementById(id).style.display = "none";
-      });
     }
 
     function toggleStatusPanel() {
