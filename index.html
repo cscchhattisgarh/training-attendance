@@ -95,7 +95,8 @@
     .adsk-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .adsk-field { margin-bottom:14px; }
     .adsk-field label { display:block; margin-bottom:6px; }
-    .adsk-field input, .adsk-field select { width:100%; padding:11px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; }
+    .adsk-field input, .adsk-field select, .adsk-field textarea { width:100%; padding:11px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; }
+    .adsk-field textarea { min-height:76px; resize:vertical; font-family:inherit; }
     .adsk-field input[readonly] { background:#f1f5f9; color:#475569; }
     .adsk-section { margin:18px 0; padding:16px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; }
     .adsk-section h3 { margin:0 0 12px; font-size:16px; color:#1e293b; }
@@ -259,8 +260,12 @@
         <h3>Order Interest</h3>
         <div class="adsk-field"><label for="adskMatmInterest">Interested for mATM Order? *</label><select id="adskMatmInterest" required><option value="">-- Select Yes/No --</option><option>Yes</option><option>No</option></select></div>
         <div class="adsk-field" id="adskMatmDateWrap" style="display:none;"><label for="adskMatmDate">Expected mATM Order Date *</label><input id="adskMatmDate" type="date"></div>
+        <div class="adsk-field" id="adskMatmReasonWrap" style="display:none;"><label for="adskMatmReason">mATM order mein interested nahi hone ka reason *</label><select id="adskMatmReason"><option value="">-- Reason select karein --</option><option>अभी आवश्यकता नहीं</option><option>पहले से mATM उपलब्ध है</option><option>मूल्य/लागत अधिक है</option><option>ग्राहक या लेनदेन की मांग कम है</option><option>कमीशन/आय उपयुक्त नहीं</option><option>पहले और जानकारी चाहिए</option><option>बाद में निर्णय लेंगे</option><option value="Other">अन्य</option></select></div>
+        <div class="adsk-field" id="adskMatmOtherReasonWrap" style="display:none;"><label for="adskMatmOtherReason">अन्य कारण लिखें *</label><textarea id="adskMatmOtherReason" maxlength="300" placeholder="अपना कारण लिखें (अधिकतम 300 अक्षर)"></textarea></div>
         <div class="adsk-field"><label for="adskPrinterInterest">Interested for Thermal Printer Order? *</label><select id="adskPrinterInterest" required><option value="">-- Select Yes/No --</option><option>Yes</option><option>No</option></select></div>
         <div class="adsk-field" id="adskPrinterDateWrap" style="display:none;"><label for="adskPrinterDate">Expected Thermal Printer Order Date *</label><input id="adskPrinterDate" type="date"></div>
+        <div class="adsk-field" id="adskPrinterReasonWrap" style="display:none;"><label for="adskPrinterReason">Thermal Printer order mein interested nahi hone ka reason *</label><select id="adskPrinterReason"><option value="">-- Reason select karein --</option><option>अभी आवश्यकता नहीं</option><option>पहले से Thermal Printer उपलब्ध है</option><option>मूल्य/लागत अधिक है</option><option>प्रिंटिंग की मांग कम है</option><option>मेरे क्षेत्र में संबंधित सेवा का उपयोग कम है</option><option>पहले और जानकारी चाहिए</option><option>बाद में निर्णय लेंगे</option><option value="Other">अन्य</option></select></div>
+        <div class="adsk-field" id="adskPrinterOtherReasonWrap" style="display:none;"><label for="adskPrinterOtherReason">अन्य कारण लिखें *</label><textarea id="adskPrinterOtherReason" maxlength="300" placeholder="अपना कारण लिखें (अधिकतम 300 अक्षर)"></textarea></div>
       </div>
       <button type="submit" id="adskSubmitBtn">Submit Attendance</button>
     </form>
@@ -854,17 +859,34 @@
       this.value = this.value.replace(/\D/g, "").slice(0, 10);
     });
 
-    function toggleAdskExpectedDate(selectId, wrapId, dateId) {
-      const required = document.getElementById(selectId).value === "Yes";
-      const wrap = document.getElementById(wrapId);
+    function toggleAdskConditionalFields(selectId, dateWrapId, dateId, reasonWrapId, reasonId, otherWrapId, otherId) {
+      const choice = document.getElementById(selectId).value;
+      const wantsOrder = choice === "Yes";
+      const noReason = choice === "No";
+      const dateWrap = document.getElementById(dateWrapId);
       const date = document.getElementById(dateId);
-      wrap.style.display = required ? "block" : "none";
-      date.required = required;
-      if (!required) date.value = "";
-    }
-    document.getElementById("adskMatmInterest").addEventListener("change", () => toggleAdskExpectedDate("adskMatmInterest", "adskMatmDateWrap", "adskMatmDate"));
-    document.getElementById("adskPrinterInterest").addEventListener("change", () => toggleAdskExpectedDate("adskPrinterInterest", "adskPrinterDateWrap", "adskPrinterDate"));
+      const reasonWrap = document.getElementById(reasonWrapId);
+      const reason = document.getElementById(reasonId);
+      const otherWrap = document.getElementById(otherWrapId);
+      const other = document.getElementById(otherId);
 
+      dateWrap.style.display = wantsOrder ? "block" : "none";
+      date.required = wantsOrder;
+      reasonWrap.style.display = noReason ? "block" : "none";
+      reason.required = noReason;
+      if (!wantsOrder) date.value = "";
+      if (!noReason) reason.value = "";
+
+      const needsOther = noReason && reason.value === "Other";
+      otherWrap.style.display = needsOther ? "block" : "none";
+      other.required = needsOther;
+      if (!needsOther) other.value = "";
+    }
+
+    document.getElementById("adskMatmInterest").addEventListener("change", () => toggleAdskConditionalFields("adskMatmInterest", "adskMatmDateWrap", "adskMatmDate", "adskMatmReasonWrap", "adskMatmReason", "adskMatmOtherReasonWrap", "adskMatmOtherReason"));
+    document.getElementById("adskMatmReason").addEventListener("change", () => toggleAdskConditionalFields("adskMatmInterest", "adskMatmDateWrap", "adskMatmDate", "adskMatmReasonWrap", "adskMatmReason", "adskMatmOtherReasonWrap", "adskMatmOtherReason"));
+    document.getElementById("adskPrinterInterest").addEventListener("change", () => toggleAdskConditionalFields("adskPrinterInterest", "adskPrinterDateWrap", "adskPrinterDate", "adskPrinterReasonWrap", "adskPrinterReason", "adskPrinterOtherReasonWrap", "adskPrinterOtherReason"));
+    document.getElementById("adskPrinterReason").addEventListener("change", () => toggleAdskConditionalFields("adskPrinterInterest", "adskPrinterDateWrap", "adskPrinterDate", "adskPrinterReasonWrap", "adskPrinterReason", "adskPrinterOtherReasonWrap", "adskPrinterOtherReason"));
     document.getElementById("adskAttendanceForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const submitBtn = document.getElementById("adskSubmitBtn");
@@ -889,8 +911,10 @@
         email,
         matmInterest: document.getElementById("adskMatmInterest").value,
         matmExpectedDate: document.getElementById("adskMatmDate").value,
+        matmNoReason: document.getElementById("adskMatmReason").value === "Other" ? "Other: " + document.getElementById("adskMatmOtherReason").value.trim() : document.getElementById("adskMatmReason").value,
         printerInterest: document.getElementById("adskPrinterInterest").value,
-        printerExpectedDate: document.getElementById("adskPrinterDate").value
+        printerExpectedDate: document.getElementById("adskPrinterDate").value,
+        printerNoReason: document.getElementById("adskPrinterReason").value === "Other" ? "Other: " + document.getElementById("adskPrinterOtherReason").value.trim() : document.getElementById("adskPrinterReason").value
       };
       submitBtn.disabled = true;
       setAdskMessage("Attendance save हो रही है…", "#2563eb");
@@ -981,3 +1005,10 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
