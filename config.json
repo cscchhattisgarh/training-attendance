@@ -1,12 +1,13 @@
 {
   "trainings": [
     {
-      "id": "adsk_micro_atm_thermal_printer_order_pushpen_kumar_verma_1794992284932",
+      "id": "adsk_micro_atm_thermal_printer_order_pushpen_kumar_verma_1794994561938",
       "topic_id": "adsk_micro_atm_thermal_printer_order",
       "name": "ADSK - MICRO ATM & THERMAL PRINTER ORDER",
-      "password": "845030",
-      "start_time": "2026-11-18T14:27:00+05:30",
-      "expiry": "2026-11-18T14:30:00+05:30"
+      "trainer_name": "Pushpen Kumar Verma",
+      "password": "749328",
+      "start_time": "2026-11-18T15:05:00+05:30",
+      "expiry": "2026-11-18T15:25:00+05:30"
     }
   ]
 }
