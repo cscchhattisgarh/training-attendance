@@ -90,6 +90,18 @@
     .toggle-link { color: #2563eb; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: underline; }
     #statusLookupPanel { display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
 
+    /* ADSK order attendance form */
+    #adskFormWrapper { display:none; width:92%; max-width:680px; background:#fff; border-radius:16px; padding:28px 24px; box-shadow:0 5px 25px rgba(0,0,0,.12); margin:24px auto; text-align:left; }
+    .adsk-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .adsk-field { margin-bottom:14px; }
+    .adsk-field label { display:block; margin-bottom:6px; }
+    .adsk-field input, .adsk-field select { width:100%; padding:11px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; }
+    .adsk-field input[readonly] { background:#f1f5f9; color:#475569; }
+    .adsk-section { margin:18px 0; padding:16px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; }
+    .adsk-section h3 { margin:0 0 12px; font-size:16px; color:#1e293b; }
+    #adskMessage { min-height:22px; margin-top:12px; font-size:14px; font-weight:bold; text-align:center; }
+    #adskReceipt { display:none; width:92%; max-width:520px; margin:24px auto; padding:28px 24px; background:#fff; border-radius:16px; box-shadow:0 5px 25px rgba(0,0,0,.12); text-align:center; border-top:6px solid #16a34a; }
+    @media (max-width:560px) { .adsk-grid { grid-template-columns:1fr; gap:0; } #adskFormWrapper { padding:22px 16px; } }
     /* Google Form Container */
     #formContainer { display: none; width: 100%; min-height: 100vh; background: #ffffff; }
     #googleForm { width: 100%; height: 100vh; min-height: 800px; border: none; display: block; }
@@ -217,6 +229,51 @@
     <div id="formSubmissionMsg" class="message"></div>
   </div>
 
+  <!-- ADSK Order Attendance Form -->
+  <div id="adskFormWrapper">
+    <div style="text-align:center; margin-bottom:20px;">
+      <div style="font-size:35px;">🧾</div>
+      <h2 style="margin:5px 0; color:#1f2937;">ADSK - MICRO ATM &amp; THERMAL PRINTER ORDER</h2>
+      <p style="font-size:13px; color:#64748b; margin:0;">CSC ID दर्ज करें। आपकी VLE जानकारी अपने आप भर जाएगी।</p>
+    </div>
+    <form id="adskAttendanceForm">
+      <div class="adsk-section">
+        <h3>VLE Details</h3>
+        <div class="adsk-field"><label for="adskCscId">CSC ID *</label><input id="adskCscId" maxlength="12" inputmode="numeric" autocomplete="off" placeholder="12 digit CSC ID" required></div>
+        <div id="adskLookupStatus" style="font-size:13px; color:#64748b; min-height:18px; margin-bottom:10px;"></div>
+        <div class="adsk-grid">
+          <div class="adsk-field"><label for="adskDistrict">District Name</label><input id="adskDistrict" readonly></div>
+          <div class="adsk-field"><label for="adskDistrictCode">District Code</label><input id="adskDistrictCode" readonly></div>
+          <div class="adsk-field"><label for="adskBlock">Block Name</label><input id="adskBlock" readonly></div>
+          <div class="adsk-field"><label for="adskBlockCode">Block Code</label><input id="adskBlockCode" readonly></div>
+          <div class="adsk-field"><label for="adskGp">GP Name</label><input id="adskGp" readonly></div>
+          <div class="adsk-field"><label for="adskGpCode">GP Code</label><input id="adskGpCode" readonly></div>
+        </div>
+        <div class="adsk-field"><label for="adskVleName">VLE Name</label><input id="adskVleName" readonly></div>
+      </div>
+      <div class="adsk-grid">
+        <div class="adsk-field"><label for="adskMobile">Mobile Number *</label><input id="adskMobile" type="tel" maxlength="10" inputmode="numeric" placeholder="10 digit mobile number" required></div>
+        <div class="adsk-field"><label for="adskEmail">Email ID *</label><input id="adskEmail" type="email" placeholder="example@gmail.com" required></div>
+      </div>
+      <div class="adsk-section">
+        <h3>Order Interest</h3>
+        <div class="adsk-field"><label for="adskMatmInterest">Interested for mATM Order? *</label><select id="adskMatmInterest" required><option value="">-- Select Yes/No --</option><option>Yes</option><option>No</option></select></div>
+        <div class="adsk-field" id="adskMatmDateWrap" style="display:none;"><label for="adskMatmDate">Expected mATM Order Date *</label><input id="adskMatmDate" type="date"></div>
+        <div class="adsk-field"><label for="adskPrinterInterest">Interested for Thermal Printer Order? *</label><select id="adskPrinterInterest" required><option value="">-- Select Yes/No --</option><option>Yes</option><option>No</option></select></div>
+        <div class="adsk-field" id="adskPrinterDateWrap" style="display:none;"><label for="adskPrinterDate">Expected Thermal Printer Order Date *</label><input id="adskPrinterDate" type="date"></div>
+      </div>
+      <button type="submit" id="adskSubmitBtn">Submit Attendance</button>
+    </form>
+    <div id="adskMessage"></div>
+  </div>
+  <div id="adskReceipt">
+    <div style="font-size:45px; color:#16a34a;">✅</div>
+    <h2 style="color:#16a34a; margin:6px 0;">उपस्थिति सफलतापूर्वक दर्ज हुई!</h2>
+    <p style="font-size:13px; color:#64748b;">ADSK Training Attendance Reference No.</p>
+    <div class="ref-badge" id="adskReferenceNo">ADSK-XXXXXX</div>
+    <p style="font-size:13px; color:#64748b; margin-top:16px;">कृपया इस reference number को सुरक्षित रखें।</p>
+    <button type="button" onclick="window.print()" style="background:#16a34a; padding:12px;">🖨️ Print / Save PDF</button>
+  </div>
   <!-- Digital Receipt Slip -->
   <div id="receiptCard">
     <div style="font-size: 45px; color: #16a34a;">✅</div>
@@ -245,6 +302,7 @@
 
   <script>
     const SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwpTTctuIyzL7eLBUKd5shb7NioozZ5iqYUQYSmwWGpKsPN-QmpXZ0JXg0om1bfj74l/exec";
+    const ADSK_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyMkAmT805x5KQW5WEwph86POb_ECh_YAMdhss1bhn323j1fWzct14mcQPmJBGpFNKP/exec";
 
     const districtBlockData = {
       "Balod": ["Balod", "Dondi", "Dondi Luhara", "Gunderdehi", "Gurur"],
@@ -582,6 +640,8 @@
     const formWrapper = document.getElementById("formWrapper");
     const formContainer = document.getElementById("formContainer");
     const googleForm = document.getElementById("googleForm");
+    const adskFormWrapper = document.getElementById("adskFormWrapper");
+    const adskReceipt = document.getElementById("adskReceipt");
 
     function base64ToUtf8(str) {
       const binary = atob(str.replace(/\s/g, ''));
@@ -698,6 +758,9 @@
         googleForm.src = `${SCRIPT_WEB_APP_URL}?action=loadWifiForm`;
         formContainer.style.display = "block";
         document.body.style.background = "#ffffff";
+      } else if (activeSession.topic_id === "adsk_micro_atm_thermal_printer_order") {
+        adskFormWrapper.style.display = "block";
+        document.body.style.display = "block";
       } else {
         initDistricts();
         document.getElementById("activeSessionHeader").textContent = activeSession.name || "Labour eKYC Attendance Form";
@@ -706,6 +769,143 @@
       }
     });
 
+    let lastAdskLookupId = "";
+    let adskVleFound = false;
+
+    function setAdskMessage(text, color = "#64748b") {
+      const el = document.getElementById("adskMessage");
+      el.textContent = text;
+      el.style.color = color;
+    }
+
+    function setAdskLookupStatus(text, color = "#64748b") {
+      const el = document.getElementById("adskLookupStatus");
+      el.textContent = text;
+      el.style.color = color;
+    }
+
+    function clearAdskVleDetails() {
+      ["adskDistrict", "adskDistrictCode", "adskBlock", "adskBlockCode", "adskGp", "adskGpCode", "adskVleName"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      adskVleFound = false;
+    }
+
+    async function lookupAdskVle() {
+      const cscId = document.getElementById("adskCscId").value.replace(/\D/g, "");
+      document.getElementById("adskCscId").value = cscId;
+      if (cscId.length !== 12) {
+        lastAdskLookupId = "";
+        clearAdskVleDetails();
+        setAdskLookupStatus(cscId.length ? "CSC ID ठीक 12 अंकों की होनी चाहिए।" : "", "#dc2626");
+        return;
+      }
+      if (cscId === lastAdskLookupId) return;
+      if (!ADSK_SCRIPT_WEB_APP_URL || ADSK_SCRIPT_WEB_APP_URL.includes("PASTE_ADSK_")) {
+        setAdskLookupStatus("ADSK Apps Script deployment URL configure नहीं है।", "#dc2626");
+        return;
+      }
+      lastAdskLookupId = cscId;
+      clearAdskVleDetails();
+      setAdskLookupStatus("CSC ID की जानकारी खोजी जा रही है…", "#2563eb");
+      try {
+        const res = await fetch(`${ADSK_SCRIPT_WEB_APP_URL}?action=lookup&cscId=${encodeURIComponent(cscId)}&_=${Date.now()}`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.error || "Lookup failed");
+        if (!result.found) {
+          lastAdskLookupId = "";
+          setAdskLookupStatus("यह CSC ID ADSK master sheet में नहीं मिली।", "#dc2626");
+          return;
+        }
+        if (result.alreadySubmitted) {
+          document.getElementById("adskFormWrapper").style.display = "none";
+          document.getElementById("adskReferenceNo").textContent = result.referenceNo || "Already Recorded";
+          document.getElementById("adskReceipt").style.display = "block";
+          setAdskLookupStatus("Attendance pehle se submit ho chuki hai.", "#16a34a");
+          return;
+        }
+        const d = result.data;
+        document.getElementById("adskDistrict").value = d.districtName || "";
+        document.getElementById("adskDistrictCode").value = d.districtCode || "";
+        document.getElementById("adskBlock").value = d.blockName || "";
+        document.getElementById("adskBlockCode").value = d.blockCode || "";
+        document.getElementById("adskGp").value = d.gpName || "";
+        document.getElementById("adskGpCode").value = d.gpCode || "";
+        document.getElementById("adskVleName").value = d.vleName || "";
+        adskVleFound = true;
+        setAdskLookupStatus("VLE details मिल गईं। नीचे बाकी जानकारी भरें।", "#16a34a");
+      } catch (err) {
+        lastAdskLookupId = "";
+        setAdskLookupStatus("VLE details नहीं मिल पाईं। Connection जाँचकर दोबारा प्रयास करें।", "#dc2626");
+      }
+    }
+
+    document.getElementById("adskCscId").addEventListener("input", function() {
+      this.value = this.value.replace(/\D/g, "").slice(0, 12);
+      if (this.value.length < 12) {
+        lastAdskLookupId = "";
+        clearAdskVleDetails();
+        setAdskLookupStatus("");
+      } else {
+        lookupAdskVle();
+      }
+    });
+    document.getElementById("adskMobile").addEventListener("input", function() {
+      this.value = this.value.replace(/\D/g, "").slice(0, 10);
+    });
+
+    function toggleAdskExpectedDate(selectId, wrapId, dateId) {
+      const required = document.getElementById(selectId).value === "Yes";
+      const wrap = document.getElementById(wrapId);
+      const date = document.getElementById(dateId);
+      wrap.style.display = required ? "block" : "none";
+      date.required = required;
+      if (!required) date.value = "";
+    }
+    document.getElementById("adskMatmInterest").addEventListener("change", () => toggleAdskExpectedDate("adskMatmInterest", "adskMatmDateWrap", "adskMatmDate"));
+    document.getElementById("adskPrinterInterest").addEventListener("change", () => toggleAdskExpectedDate("adskPrinterInterest", "adskPrinterDateWrap", "adskPrinterDate"));
+
+    document.getElementById("adskAttendanceForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById("adskSubmitBtn");
+      const cscId = document.getElementById("adskCscId").value.trim();
+      const mobile = document.getElementById("adskMobile").value.trim();
+      const email = document.getElementById("adskEmail").value.trim();
+      if (!adskVleFound || cscId.length !== 12) {
+        setAdskMessage("Pehle valid CSC ID se VLE details load karein.", "#dc2626");
+        return;
+      }
+      if (!/^\d{10}$/.test(mobile)) {
+        setAdskMessage("Mobile number ठीक 10 अंकों का होना चाहिए।", "#dc2626");
+        return;
+      }
+      if (!ADSK_SCRIPT_WEB_APP_URL || ADSK_SCRIPT_WEB_APP_URL.includes("PASTE_ADSK_")) {
+        setAdskMessage("ADSK Apps Script deployment URL configure नहीं है।", "#dc2626");
+        return;
+      }
+      const payload = {
+        cscId,
+        mobile,
+        email,
+        matmInterest: document.getElementById("adskMatmInterest").value,
+        matmExpectedDate: document.getElementById("adskMatmDate").value,
+        printerInterest: document.getElementById("adskPrinterInterest").value,
+        printerExpectedDate: document.getElementById("adskPrinterDate").value
+      };
+      submitBtn.disabled = true;
+      setAdskMessage("Attendance save हो रही है…", "#2563eb");
+      try {
+        const res = await fetch(ADSK_SCRIPT_WEB_APP_URL, { method: "POST", body: JSON.stringify(payload) });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.error || (result.duplicate ? "Attendance पहले से दर्ज है।" : "Submit failed"));
+        document.getElementById("adskFormWrapper").style.display = "none";
+        document.getElementById("adskReferenceNo").textContent = result.referenceNo;
+        adskReceipt.style.display = "block";
+      } catch (err) {
+        setAdskMessage(err.message || "Network/Server Error! कृपया पुनः प्रयास करें।", "#dc2626");
+        submitBtn.disabled = false;
+      }
+    });
     // Form Submit Handler
     document.getElementById("attendanceForm").addEventListener("submit", function(e) {
       e.preventDefault();
