@@ -1,12 +1,12 @@
 {
   "trainings": [
     {
-      "id": "adsk_matm_order_pushpen_kumar_verma_1794985074119",
-      "topic_id": "adsk_matm_order",
-      "name": "ADSK VLE Meeting on mATM Order",
+      "id": "adsk_micro_atm_thermal_printer_order_pushpen_kumar_verma_1794985854023",
+      "topic_id": "adsk_micro_atm_thermal_printer_order",
+      "name": "ADSK - MICRO ATM & THERMAL PRINTER ORDER",
       "password": "909090",
-      "start_time": "2026-11-18T12:27:00+05:30",
-      "expiry": "2026-11-18T12:35:00+05:30"
+      "start_time": "2026-11-18T12:40:00+05:30",
+      "expiry": "2026-11-18T12:53:00+05:30"
     }
   ]
 }
