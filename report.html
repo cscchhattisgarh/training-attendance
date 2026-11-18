@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>District Training Attendance Report</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; padding:22px; background:#f1f5f9; color:#0f172a; font-family:Arial,sans-serif; }
+    .shell { width:100%; max-width:1320px; margin:0 auto; }
+    .header { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:22px 26px; color:#fff; background:linear-gradient(110deg,#1e3a8a,#2563eb); border-radius:15px; box-shadow:0 6px 18px rgba(37,99,235,.2); }
+    .header h1 { margin:0 0 6px; font-size:23px; }
+    .header p { margin:0; font-size:13px; opacity:.9; }
+    .card { margin-top:18px; padding:20px 22px; background:#fff; border:1px solid #dbe4f0; border-radius:13px; box-shadow:0 4px 14px rgba(15,23,42,.05); }
+    .filters { display:grid; grid-template-columns:minmax(230px,1.3fr) repeat(3,minmax(150px,1fr)) auto; gap:12px; align-items:end; }
+    label { display:block; margin-bottom:6px; color:#334155; font-size:13px; font-weight:700; }
+    select,input { width:100%; height:42px; padding:9px 11px; border:1px solid #cbd5e1; border-radius:7px; background:#fff; font-size:14px; }
+    button { min-height:42px; padding:10px 15px; border:0; border-radius:7px; background:#2563eb; color:#fff; font-size:14px; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .btn-secondary { background:#0f766e; }
+    .actions { display:flex; gap:8px; }
+    .status { min-height:20px; margin-top:12px; font-size:13px; font-weight:700; color:#64748b; }
+    .status.error { color:#dc2626; }
+    .status.success { color:#15803d; }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:12px; }
+    .metric { padding:15px 16px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; }
+    .metric .label { color:#64748b; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+    .metric .value { margin-top:7px; font-size:25px; font-weight:800; color:#1e3a8a; }
+    .metric .note { margin-top:4px; font-size:12px; color:#64748b; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 15px; padding-bottom:11px; border-bottom:1px solid #e2e8f0; font-size:17px; }
+    .table-wrap { overflow:auto; }
+    table { width:100%; min-width:1080px; border-collapse:collapse; font-size:13px; }
+    th,td { padding:10px 11px; border-bottom:1px solid #e2e8f0; text-align:left; white-space:nowrap; }
+    th { position:sticky; top:0; background:#f8fafc; color:#334155; z-index:1; }
+    tbody tr:hover { background:#f8fafc; }
+    .pill { display:inline-block; min-width:74px; padding:4px 8px; border-radius:999px; text-align:center; font-size:11px; font-weight:700; }
+    .yes { background:#dcfce7; color:#166534; }
+    .no { background:#fee2e2; color:#991b1b; }
+    .pending { background:#fef3c7; color:#92400e; }
+    .empty { padding:24px; text-align:center; color:#64748b; }
+    @media (max-width:1000px) { .filters { grid-template-columns:repeat(2,minmax(0,1fr)); } .summary-grid { grid-template-columns:repeat(2,minmax(140px,1fr)); } }
+    @media (max-width:600px) { body { padding:12px; } .header { align-items:flex-start; flex-direction:column; padding:18px; } .header h1 { font-size:20px; } .filters,.summary-grid { grid-template-columns:1fr 1fr; } .filters > :first-child { grid-column:1/-1; } .actions { grid-column:1/-1; } .card { padding:16px; } }
+    @media print { body { padding:0; background:#fff; } .header { color:#000; background:#fff; box-shadow:none; padding:0 0 15px; } .filters,.actions,.status { display:none!important; } .card { box-shadow:none; border:1px solid #ddd; break-inside:avoid; } .table-wrap { overflow:visible; } table { min-width:0; font-size:9px; } th,td { padding:5px; white-space:normal; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div><h1>📊 District Training &amp; Attendance Report</h1><p>CSC State Office Chhattisgarh · ADSK mATM &amp; Thermal Printer Order</p></div>
+      <div id="reportDistrictHeading" style="font-weight:700;">Select a district</div>
+    </header>
+
+    <section class="card">
+      <div class="filters">
+        <div><label for="districtSelect">District</label><select id="districtSelect"><option value="">Loading districts…</option></select></div>
+        <div><label for="blockFilter">Block</label><select id="blockFilter" disabled><option value="">All Blocks</option></select></div>
+        <div><label for="attendanceFilter">Attendance</label><select id="attendanceFilter" disabled><option value="">All</option><option value="Submitted">Submitted</option><option value="Pending">Pending</option></select></div>
+        <div><label for="searchFilter">Find VLE / CSC ID / GP</label><input id="searchFilter" type="search" placeholder="Type to search" disabled></div>
+        <div class="actions"><button id="viewBtn" type="button" disabled>View Report</button></div>
+      </div>
+      <div id="status" class="status">District list load ho rahi hai…</div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title"><span>Summary</span><span id="summaryDistrict" style="font-size:13px;color:#64748b;"></span></h2>
+      <div id="summaryGrid" class="summary-grid"><div class="empty" style="grid-column:1/-1;">Report dekhne ke liye district select karein.</div></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title"><span>Detailed VLE Responses</span><div class="actions"><button id="csvBtn" class="btn-secondary" type="button" disabled>Download CSV</button><button id="printBtn" type="button" disabled>Print</button></div></h2>
+      <div class="table-wrap" id="tableWrap"><div class="empty">Report dekhne ke liye district select karein.</div></div>
+    </section>
+  </main>
+
+  <script>
+    const REPORT_API_URL = "https://script.google.com/macros/s/AKfycbyMkAmT805x5KQW5WEwph86POb_ECh_YAMdhss1bhn323j1fWzct14mcQPmJBGpFNKP/exec";
+    let reportRows = [];
+    let activeDistrict = null;
+
+    const districtSelect = document.getElementById("districtSelect");
+    const blockFilter = document.getElementById("blockFilter");
+    const attendanceFilter = document.getElementById("attendanceFilter");
+    const searchFilter = document.getElementById("searchFilter");
+    const viewBtn = document.getElementById("viewBtn");
+    const statusEl = document.getElementById("status");
+
+    function setStatus(message, kind = "") {
+      statusEl.textContent = message;
+      statusEl.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" })[ch]);
+    }
+
+    async function loadDistricts() {
+      try {
+        const response = await fetch(`${REPORT_API_URL}?action=districts&_=${Date.now()}`);
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || "District list fetch failed");
+        districtSelect.innerHTML = '<option value="">-- Select District --</option>';
+        result.districts.forEach(d => {
+          const option = document.createElement("option");
+          option.value = d.code;
+          option.textContent = d.name;
+          option.dataset.name = d.name;
+          districtSelect.appendChild(option);
+        });
+        setStatus("District select karke View Report par click karein.");
+      } catch (error) {
+        districtSelect.innerHTML = '<option value="">District list load nahi hui</option>';
+        setStatus("Report connection error: " + error.message, "error");
+      }
+    }
+
+    function updateBlockOptions(rows) {
+      const blocks = [...new Set(rows.map(r => r.blockName).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+      blockFilter.innerHTML = '<option value="">All Blocks</option>';
+      blocks.forEach(block => {
+        const option = document.createElement("option");
+        option.value = block;
+        option.textContent = block;
+        blockFilter.appendChild(option);
+      });
+    }
+
+    function updateSummary(rows) {
+      const total = rows.length;
+      const submitted = rows.filter(r => r.attendanceStatus === "Submitted").length;
+      const count = (field, value) => rows.filter(r => r[field] === value).length;
+      const matmYes = count("matmInterest", "Yes"), matmNo = count("matmInterest", "No");
+      const printerYes = count("printerInterest", "Yes"), printerNo = count("printerInterest", "No");
+      const cards = [
+        ["VLEs in district", total, "Master list"],
+        ["Attendance submitted", submitted, `${Math.max(0,total-submitted)} pending`],
+        ["mATM · Yes", matmYes, `${matmNo} No · ${Math.max(0,total-matmYes-matmNo)} no response`],
+        ["Thermal Printer · Yes", printerYes, `${printerNo} No · ${Math.max(0,total-printerYes-printerNo)} no response`],
+        ["mATM · No", matmNo, "Not interested"],
+        ["Thermal Printer · No", printerNo, "Not interested"]
+      ];
+      document.getElementById("summaryGrid").innerHTML = cards.map(card => `<div class="metric"><div class="label">${escapeHtml(card[0])}</div><div class="value">${escapeHtml(card[1])}</div><div class="note">${escapeHtml(card[2])}</div></div>`).join("");
+    }
+
+    function getFilteredRows() {
+      const block = blockFilter.value;
+      const attendance = attendanceFilter.value;
+      const query = searchFilter.value.trim().toLowerCase();
+      return reportRows.filter(row => {
+        if (block && row.blockName !== block) return false;
+        if (attendance && row.attendanceStatus !== attendance) return false;
+        if (query) {
+          const haystack = [row.vleName,row.cscId,row.gpName,row.blockName,row.gpCode].join(" ").toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        return true;
+      });
+    }
+
+    function responsePill(value) {
+      const text = value || "No response";
+      const cls = value === "Yes" ? "yes" : (value === "No" ? "no" : "pending");
+      return `<span class="pill ${cls}">${escapeHtml(text)}</span>`;
+    }
+
+    function renderTable() {
+      const rows = getFilteredRows();
+      const wrap = document.getElementById("tableWrap");
+      if (!rows.length) {
+        wrap.innerHTML = '<div class="empty">Is filter ke liye koi VLE record nahi mila.</div>';
+        return;
+      }
+      const body = rows.map(r => `<tr>
+        <td>${escapeHtml(r.cscId)}</td><td>${escapeHtml(r.vleName)}</td><td>${escapeHtml(r.blockName)}</td><td>${escapeHtml(r.gpName)}</td>
+        <td>${responsePill(r.matmInterest)}</td><td>${escapeHtml(r.matmExpectedDate)}</td>
+        <td>${responsePill(r.printerInterest)}</td><td>${escapeHtml(r.printerExpectedDate)}</td>
+        <td>${responsePill(r.attendanceStatus)}</td><td>${escapeHtml(r.attendanceReference)}</td>
+      </tr>`).join("");
+      wrap.innerHTML = `<table><thead><tr><th>CSC ID</th><th>VLE Name</th><th>Block</th><th>GP</th><th>mATM</th><th>Expected Date</th><th>Thermal Printer</th><th>Expected Date</th><th>Attendance</th><th>Reference No.</th></tr></thead><tbody>${body}</tbody></table>`;
+    }
+
+    async function loadReport() {
+      const code = districtSelect.value;
+      if (!code) { setStatus("Pehle district select karein.", "error"); return; }
+      viewBtn.disabled = true;
+      setStatus("District report load ho rahi hai…");
+      try {
+        const response = await fetch(`${REPORT_API_URL}?action=districtReport&districtCode=${encodeURIComponent(code)}&_=${Date.now()}`);
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || "Report fetch failed");
+        reportRows = result.rows || [];
+        activeDistrict = districtSelect.selectedOptions[0].textContent;
+        document.getElementById("reportDistrictHeading").textContent = activeDistrict;
+        document.getElementById("summaryDistrict").textContent = activeDistrict;
+        updateSummary(reportRows);
+        updateBlockOptions(reportRows);
+        blockFilter.disabled = false;
+        attendanceFilter.disabled = false;
+        searchFilter.disabled = false;
+        document.getElementById("csvBtn").disabled = false;
+        document.getElementById("printBtn").disabled = false;
+        renderTable();
+        setStatus(`${reportRows.length} VLE records loaded for ${activeDistrict}.`, "success");
+      } catch (error) {
+        reportRows = [];
+        setStatus("Report load nahi hui: " + error.message, "error");
+      } finally {
+        viewBtn.disabled = !districtSelect.value;
+      }
+    }
+
+    function downloadCsv() {
+      const rows = getFilteredRows();
+      const headers = ["CSC ID","VLE Name","District","Block","GP","mATM Interest","mATM Expected Date","Thermal Printer Interest","Thermal Printer Expected Date","Attendance Status","Attendance Reference No"];
+      const values = rows.map(r => [r.cscId,r.vleName,r.districtName,r.blockName,r.gpName,r.matmInterest,r.matmExpectedDate,r.printerInterest,r.printerExpectedDate,r.attendanceStatus,r.attendanceReference]);
+      const csv = [headers,...values].map(row => row.map(value => `"${String(value == null ? "" : value).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+      const blob = new Blob(["\uFEFF" + csv], { type:"text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `training-report-${(activeDistrict || "district").replace(/\s+/g,"-")}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    districtSelect.addEventListener("change", () => { viewBtn.disabled = !districtSelect.value; });
+    viewBtn.addEventListener("click", loadReport);
+    blockFilter.addEventListener("change", renderTable);
+    attendanceFilter.addEventListener("change", renderTable);
+    searchFilter.addEventListener("input", renderTable);
+    document.getElementById("csvBtn").addEventListener("click", downloadCsv);
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
+    loadDistricts();
+  </script>
+</body>
+</html>
+
