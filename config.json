@@ -1,28 +1,12 @@
 {
   "trainings": [
     {
-      "id": "adsk_micro_atm_thermal_printer_order_pushpen_kumar_verma_1794985854023",
+      "id": "adsk_micro_atm_thermal_printer_order_pushpen_kumar_verma_1794987941393",
       "topic_id": "adsk_micro_atm_thermal_printer_order",
       "name": "ADSK - MICRO ATM & THERMAL PRINTER ORDER",
-      "password": "909090",
-      "start_time": "2026-11-18T12:40:00+05:30",
-      "expiry": "2026-11-18T12:53:00+05:30"
-    },
-    {
-      "id": "labour_ekyc_pushpen_kumar_verma_1794986357876",
-      "topic_id": "labour_ekyc",
-      "name": "Labour eKYC Training Attendance Form",
-      "password": "898989",
-      "start_time": "2026-11-18T12:49:00+05:30",
-      "expiry": "2026-11-18T12:53:00+05:30"
-    },
-    {
-      "id": "wifi_choupal_pushpen_kumar_verma_1794986418775",
-      "topic_id": "wifi_choupal",
-      "name": "WiFi Choupal Training Attendance Form",
-      "password": "890890",
-      "start_time": "2026-11-18T12:50:00+05:30",
-      "expiry": "2026-11-18T12:53:00+05:30"
+      "password": "176064",
+      "start_time": "2026-11-18T13:15:00+05:30",
+      "expiry": "2026-11-18T13:35:00+05:30"
     }
   ]
 }
