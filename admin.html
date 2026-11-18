@@ -13,6 +13,9 @@
     label span { color: #dc2626; }
     input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; outline: none; background: white; }
     input:focus, select:focus { border-color: #2563eb; }
+    .password-input-row { display: flex; gap: 8px; align-items: stretch; }
+    .password-input-row input { flex: 1; min-width: 0; }
+    .btn-auto-password { flex: 0 0 auto; padding: 12px 15px; background: #0f766e; color: white; white-space: nowrap; }
     input:disabled, select:disabled { background: #f1f5f9; cursor: not-allowed; border-color: #e2e8f0; }
     
     .btn-group { display: flex; gap: 10px; margin-top: 20px; }
@@ -76,6 +79,7 @@
         <option value="" disabled selected>-- Select Topic --</option>
         <option value="labour_ekyc">Labour eKYC Training (Web Form)</option>
         <option value="wifi_choupal">WiFi Choupal Training (Google Form)</option>
+        <option value="adsk_micro_atm_thermal_printer_order">ADSK - MICRO ATM &amp; THERMAL PRINTER ORDER</option>
       </select>
 
       <label for="trainerSelect">Select Trainer: <span>*</span></label>
@@ -94,7 +98,10 @@
       </select>
 
       <label for="password">Set Password (6 Digits): <span>*</span></label>
-      <input type="text" id="password" maxlength="6" pattern="\d{6}" placeholder="123456" disabled required>
+      <div class="password-input-row">
+        <input type="text" id="password" maxlength="6" pattern="\d{6}" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6)" placeholder="123456" disabled required>
+        <button type="button" class="btn-auto-password" id="autoPasswordBtn" onclick="generateRandomPassword()" disabled>Auto</button>
+      </div>
 
       <label for="startTime">Start Date & Time (IST): <span>*</span></label>
       <input type="datetime-local" id="startTime" onchange="handleStartTimeChange()" disabled required>
@@ -184,13 +191,39 @@
       const expiryInput = document.getElementById("expiry");
 
       document.getElementById("password").disabled = !isSelected;
+      document.getElementById("autoPasswordBtn").disabled = !isSelected;
       startTimeInput.disabled = !isSelected;
       expiryInput.disabled = !isSelected;
       document.getElementById("saveBtn").disabled = !isSelected;
 
       const nowFormatted = getCurrentDateTimeLocal();
       startTimeInput.min = nowFormatted;
-      expiryInput.min = nowFormatted;
+      if (isSelected && !startTimeInput.value) {
+        startTimeInput.value = nowFormatted;
+        expiryInput.value = addMinutesToDateTimeLocal(nowFormatted, 20);
+      }
+      expiryInput.min = startTimeInput.value || nowFormatted;
+    }
+
+    function addMinutesToDateTimeLocal(value, minutes) {
+      const date = new Date(value);
+      date.setMinutes(date.getMinutes() + minutes);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function generateRandomPassword() {
+      const passwordInput = document.getElementById("password");
+      const range = 900000;
+      if (window.crypto && window.crypto.getRandomValues) {
+        const max = 0x100000000;
+        const limit = Math.floor(max / range) * range;
+        const values = new Uint32Array(1);
+        do { window.crypto.getRandomValues(values); } while (values[0] >= limit);
+        passwordInput.value = String(100000 + (values[0] % range));
+      } else {
+        passwordInput.value = String(100000 + Math.floor(Math.random() * range));
+      }
+      passwordInput.focus();
     }
 
     function handleStartTimeChange() {
@@ -198,12 +231,9 @@
       const expiryInput = document.getElementById("expiry");
       if (startVal) {
         expiryInput.min = startVal;
-        if (expiryInput.value && expiryInput.value <= startVal) {
-          expiryInput.value = "";
-        }
+        expiryInput.value = addMinutesToDateTimeLocal(startVal, 20);
       }
     }
-
     function formatISTDisplay(isoStr) {
       if (!isoStr) return "Not Set";
       try {
@@ -215,6 +245,14 @@
       } catch (e) { return isoStr; }
     }
 
+    function getTopicLabel(topicId) {
+      const labels = {
+        labour_ekyc: 'Labour eKYC (Web Form)',
+        wifi_choupal: 'WiFi Choupal (Google Form)',
+        adsk_micro_atm_thermal_printer_order: 'ADSK - MICRO ATM & THERMAL PRINTER ORDER'
+      };
+      return labels[topicId] || topicId || 'Unknown Training';
+    }
     async function fetchCurrentConfig(silent = false) {
       const token = document.getElementById("token").value.trim();
       const status = document.getElementById("status");
@@ -281,7 +319,7 @@
               cachedConfig.trainings.forEach(t => {
                 html += `<div class="training-item">
                   <strong style="color:#0f766e;">📌 ${t.name}:</strong><br>
-                  <b>Topic:</b> ${t.topic_id === 'wifi_choupal' ? 'WiFi Choupal (Google Form)' : 'Labour eKYC (Web Form)'}<br>
+                  <b>Topic:</b> ${getTopicLabel(t.topic_id)}<br>
                   <b>Password:</b> ${t.password || 'N/A'}<br>
                   <b>Start:</b> ${formatISTDisplay(t.start_time)}<br>
                   <b>Expiry:</b> ${formatISTDisplay(t.expiry)}
@@ -437,9 +475,12 @@
       const status = document.getElementById("status");
       const saveBtn = document.getElementById("saveBtn");
 
-      let sessionName = (topicValue === "labour_ekyc") 
-        ? "Labour eKYC Training Attendance Form" 
-        : "WiFi Choupal Training Attendance Form";
+      const sessionNames = {
+        labour_ekyc: "Labour eKYC Training Attendance Form",
+        wifi_choupal: "WiFi Choupal Training Attendance Form",
+        adsk_micro_atm_thermal_printer_order: "ADSK - MICRO ATM & THERMAL PRINTER ORDER"
+      };
+      const sessionName = sessionNames[topicValue] || topicValue;
 
       const formattedStart = `${startVal}:00+05:30`;
       const formattedExpiry = `${expVal}:00+05:30`;
@@ -531,3 +572,5 @@
   </script>
 </body>
 </html>
+
+
