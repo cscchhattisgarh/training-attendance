@@ -65,6 +65,11 @@
     .panel-intro p { margin:5px 0 0;color:var(--muted);font-size:12px; }
     .selector-wrap { display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(200px,1fr) minmax(190px,1.2fr);align-items:end;gap:12px;margin:0 0 17px;padding:14px;border:1px solid #e5ebf2;border-radius:10px;background:#f9fbfd; }
     .empty { padding:30px 20px; color:#78879a; text-align:center; border:1px dashed #ccd7e4; border-radius:9px; background:#fafbfd; font-size:13px; }
+    .loading-overlay { position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(15,31,54,.38);backdrop-filter:blur(3px); }
+    .loading-overlay[hidden] { display:none; }
+    .loading-dialog { display:flex;min-width:230px;flex-direction:column;align-items:center;gap:14px;padding:25px 30px;border:1px solid rgba(255,255,255,.75);border-radius:16px;background:#fff;box-shadow:0 18px 55px rgba(16,42,78,.24);color:#30445f;font-size:13px;font-weight:700; }
+    .loading-spinner { width:38px;height:38px;border:4px solid #e5edf7;border-top-color:#2866c2;border-right-color:#2866c2;border-radius:50%;animation:spin .75s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
     .actions { display:flex; gap:8px; }
     button { min-height:39px; padding:9px 14px; border:0; border-radius:8px; color:#fff; background:#245da9; font-size:12px; font-weight:700; cursor:pointer; }
     button:hover { background:#1d4d90; }.btn-secondary { color:#245f58; background:#e9f5f1; }.btn-secondary:hover { background:#d9eee6; }
@@ -76,6 +81,9 @@
   </style>
 </head>
 <body>
+  <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite" aria-label="Loading" hidden>
+    <div class="loading-dialog"><span class="loading-spinner" aria-hidden="true"></span><span id="loadingMessage">Loading report data…</span></div>
+  </div>
   <main class="shell">
     <header class="header">
       <div class="brand"><div class="brand-mark">▤</div><div><h1>District Training &amp; Attendance</h1><p>CSC State Office Chhattisgarh · ADSK order response report</p></div></div>
@@ -83,25 +91,25 @@
     </header>
 
     <section class="card">
-      <div class="section-head"><div><div class="section-kicker">Statewide overview</div><h2>Training response at a glance</h2><p>Live totals across all districts · click a district below to explore individual VLE responses</p></div><span class="helper-chip">● Sheet data</span></div>
-      <div id="summaryGrid" class="summary-grid"><div class="empty" style="grid-column:1/-1;">Summary load ho rahi hai…</div></div>
+      <div class="section-head"><div><div class="section-kicker" id="summaryScopeLabel">Statewide overview</div><h2>Training response at a glance</h2><p id="summaryScopeDescription">Response totals across all districts.</p></div><span class="helper-chip">Source: Attendance sheet</span></div>
+      <div id="summaryGrid" class="summary-grid"><div class="empty" style="grid-column:1/-1;">Loading summary…</div></div>
     </section>
 
     <section class="card" id="exploreSection">
-      <div class="section-head"><div><div class="section-kicker">Explore the report</div><h2>Choose the view you need</h2><p>Compare district-level coverage or review each VLE’s response.</p></div><div id="status" class="status">District aur block options load ho rahe hain…</div></div>
+      <div class="section-head"><div><div class="section-kicker">Explore the report</div><h2>Choose the view you need</h2><p>Compare district-level coverage or review each VLE’s response.</p></div><div id="status" class="status">Loading district and block options…</div></div>
       <div class="report-tabs" role="tablist" aria-label="Report views">
-        <button class="report-tab" id="districtTab" type="button" role="tab" aria-selected="true" aria-controls="districtPanel">District-wise Summary</button>
-        <button class="report-tab" id="vleTab" type="button" role="tab" aria-selected="false" aria-controls="vlePanel" tabindex="-1">VLE-wise Summary</button>
+        <button class="report-tab" id="districtTab" type="button" role="tab" aria-selected="true" aria-controls="districtPanel">District Summary</button>
+        <button class="report-tab" id="vleTab" type="button" role="tab" aria-selected="false" aria-controls="vlePanel" tabindex="-1">VLE Summary</button>
       </div>
       <section class="report-panel" id="districtPanel" role="tabpanel" aria-labelledby="districtTab">
-        <div class="panel-intro"><div><h3>All districts</h3><p>Compare response counts across districts. Click a row to open its VLE-wise view.</p></div><div id="districtStatus" class="helper-chip"></div></div>
-        <div class="table-wrap" id="districtTableWrap"><div class="empty">District summary load ho rahi hai…</div></div>
+        <div class="panel-intro"><div><h3>All districts</h3><p>Compare response counts across districts. Select a row to view that district’s VLE records.</p></div><div id="districtStatus" class="helper-chip"></div></div>
+        <div class="table-wrap" id="districtTableWrap"><div class="empty">Loading district summary…</div></div>
       </section>
       <section class="report-panel" id="vlePanel" role="tabpanel" aria-labelledby="vleTab" hidden>
         <div class="selector-wrap">
-          <div><label for="districtSelect">District</label><select id="districtSelect"><option value="">Select a district</option></select></div>
+          <div><label for="districtSelect">District</label><select id="districtSelect"><option value="">All Districts</option></select></div>
           <div><label for="blockFilter">Block</label><select id="blockFilter"><option value="">All Blocks</option></select></div>
-          <div id="vleSubheading" class="helper-chip">Choose a district to load its VLE records.</div>
+          <div id="vleSubheading" class="helper-chip">Select a district to view its VLE records.</div>
         </div>
         <div class="section-head"><div><div class="section-kicker">Individual responses</div><h3 style="margin:0;font-size:16px;">VLE response details</h3></div><div class="actions"><button id="csvBtn" class="btn-secondary" type="button" disabled>Download CSV</button><button id="printBtn" type="button" disabled>Print</button></div></div>
         <div class="detail-toolbar">
@@ -111,7 +119,7 @@
           <div><label for="searchFilter">Search</label><input id="searchFilter" type="search" placeholder="VLE, CSC ID or GP" disabled></div>
           <div id="detailCount" class="detail-count"></div>
         </div>
-        <div class="table-wrap" id="vleTableWrap"><div class="empty">VLE detail ke liye pehle district select karein.</div></div>
+        <div class="table-wrap" id="vleTableWrap"><div class="empty">Select a district to view VLE details.</div></div>
       </section>
     </section>
   </main>
@@ -123,6 +131,7 @@
     let districtRows = [];
     let activeDistrict = null;
     let districtRequestId = 0;
+    let statewideSummary = {};
     const districtSort = { key:"districtName", direction:1 };
     const detailSort = { key:"vleName", direction:1 };
 
@@ -135,6 +144,11 @@
     const statusEl = document.getElementById("status");
     const districtTab = document.getElementById("districtTab");
     const vleTab = document.getElementById("vleTab");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingMessage = document.getElementById("loadingMessage");
+
+    function showLoading(message) { loadingMessage.textContent=message; loadingOverlay.hidden=false; }
+    function hideLoading() { loadingOverlay.hidden=true; }
 
     function switchReportTab(name, focusTab=false) {
       const showDistrict=name==="district";
@@ -151,7 +165,7 @@
     function escapeHtml(value) { return String(value==null?"":value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[ch]); }
     function responsePill(value) { const text=value||"No response"; const cls=value==="Yes"?"yes":(value==="No"?"no":"pending"); return `<span class="pill ${cls}">${escapeHtml(text)}</span>`; }
 
-    function renderOverallSummary(data) {
+    function renderOverallSummary(data, scopeName="All Districts") {
       const total = Number(data.totalVles || 0);
       const submitted = Number(data.attendanceSubmitted || 0);
       const pendingAttendance = Number(data.attendancePending || 0);
@@ -161,11 +175,19 @@
         return `<div class="stack-track"><span class="stack-yes" style="width:${pct(yes,denominator)}%"></span><span class="stack-no" style="width:${pct(no,denominator)}%"></span><span class="stack-pending" style="width:${pct(pending,denominator)}%"></span></div>`;
       };
       const cards = `
-        <article class="metric metric-primary"><div class="metric-heading"><span>VLEs in master list</span><span class="metric-icon">VLE</span></div><div class="metric-value">${escapeHtml(total)}</div><div class="metric-note">All districts combined</div></article>
-        <article class="metric"><div class="metric-heading"><span>Attendance recorded</span><span class="metric-icon icon-green">✓</span></div><div class="metric-value">${escapeHtml(submitted)} <small>/ ${escapeHtml(total)}</small></div><div class="metric-note">${escapeHtml(pendingAttendance)} VLEs still pending · ${pct(submitted,total)}% recorded</div><div class="progress-track"><span style="width:${pct(submitted,total)}%"></span></div></article>
+        <article class="metric metric-primary"><div class="metric-heading"><span>VLEs in master list</span><span class="metric-icon">VLE</span></div><div class="metric-value">${escapeHtml(total)}</div><div class="metric-note">${escapeHtml(scopeName)}</div></article>
+        <article class="metric"><div class="metric-heading"><span>Attendance recorded</span><span class="metric-icon icon-green">✓</span></div><div class="metric-value">${escapeHtml(submitted)} <small>/ ${escapeHtml(total)}</small></div><div class="metric-note">${escapeHtml(pendingAttendance)} pending · ${pct(submitted,total)}% recorded</div><div class="progress-track"><span style="width:${pct(submitted,total)}%"></span></div></article>
         <article class="metric order-metric"><div class="metric-heading"><span>Micro ATM interest</span><span class="metric-icon icon-blue">mATM</span></div><div class="metric-value">${escapeHtml(data.matmYes||0)} <small>Yes</small></div>${meter(Number(data.matmYes||0),Number(data.matmNo||0),Number(data.matmPending||0))}<div class="metric-legend"><span><i class="dot dot-yes"></i>Yes ${escapeHtml(data.matmYes||0)}</span><span><i class="dot dot-no"></i>No ${escapeHtml(data.matmNo||0)}</span><span><i class="dot dot-pending"></i>Pending ${escapeHtml(data.matmPending||0)}</span></div></article>
         <article class="metric order-metric"><div class="metric-heading"><span>Thermal Printer interest</span><span class="metric-icon icon-violet">TP</span></div><div class="metric-value">${escapeHtml(data.printerYes||0)} <small>Yes</small></div>${meter(Number(data.printerYes||0),Number(data.printerNo||0),Number(data.printerPending||0))}<div class="metric-legend"><span><i class="dot dot-yes"></i>Yes ${escapeHtml(data.printerYes||0)}</span><span><i class="dot dot-no"></i>No ${escapeHtml(data.printerNo||0)}</span><span><i class="dot dot-pending"></i>Pending ${escapeHtml(data.printerPending||0)}</span></div></article>`;
       document.getElementById("summaryGrid").innerHTML = cards;
+      const isOverall=scopeName==="All Districts";
+      document.getElementById("summaryScopeLabel").textContent=isOverall?"Statewide overview":"District summary";
+      document.getElementById("summaryScopeDescription").textContent=isOverall?"Response totals across all districts.":`Current response totals for ${scopeName} district.`;
+    }
+
+    function updateSummaryScope() {
+      const selected=districtSummaries.find(d=>d.districtCode===activeDistrict);
+      renderOverallSummary(selected||statewideSummary,selected?selected.districtName:"All Districts");
     }
     function sortValue(value) { return value==null?"":value; }
     function sortedRows(rows,state) {
@@ -184,7 +206,7 @@
     function renderDistrictSummary() {
       const wrap=document.getElementById("districtTableWrap");
       document.getElementById("districtStatus").textContent=`${districtSummaries.length.toLocaleString()} districts`;
-      if(!districtSummaries.length){wrap.innerHTML='<div class="empty">Sheet mein district records nahi mile.</div>';return;}
+      if(!districtSummaries.length){wrap.innerHTML='<div class="empty">No district records were found in the sheet.</div>';return;}
       const rows=sortedRows(districtSummaries,districtSort);
       const body=rows.map(r=>`<tr class="district-row ${activeDistrict===r.districtCode?"selected":""}" data-code="${escapeHtml(r.districtCode)}" onclick="selectDistrictFromSummary('${escapeHtml(r.districtCode)}')">
         <td>${escapeHtml(r.districtName)}</td><td>${escapeHtml(r.blockCount)}</td><td>${escapeHtml(r.totalVles)}</td><td>${escapeHtml(r.attendanceSubmitted)}</td><td>${escapeHtml(r.attendancePending)}</td>
@@ -210,6 +232,7 @@
     }
 
     async function loadDashboard() {
+      showLoading("Loading the report summary…");
       try {
         const response=await fetch(`${REPORT_API_URL}?action=districts&_=${Date.now()}`);
         const result=await response.json();
@@ -217,14 +240,17 @@
         allDistricts=result.districts||[];
         allBlocks=result.blocks||[];
         districtSummaries=allDistricts;
-        renderOverallSummary(result.summary||{});
+        statewideSummary=result.summary||{};
+        updateSummaryScope();
         districtSelect.innerHTML='<option value="">All Districts</option>'+allDistricts.map(d=>`<option value="${escapeHtml(d.districtCode)}">${escapeHtml(d.districtName)}</option>`).join("");
         fillBlockOptions();
         renderDistrictSummary();
-        setStatus(`${allDistricts.length} districts aur ${allBlocks.length} block options load hue.`,"success");
+        setStatus(`${allDistricts.length} districts and ${allBlocks.length} blocks loaded.`,"success");
       } catch(error) {
-        setStatus("Dashboard load nahi hua: "+error.message,"error");
-        document.getElementById("summaryGrid").innerHTML='<div class="empty" style="grid-column:1/-1;">Summary load nahi ho saki.</div>';
+        setStatus("Unable to load the dashboard: "+error.message,"error");
+        document.getElementById("summaryGrid").innerHTML='<div class="empty" style="grid-column:1/-1;">The summary could not be loaded.</div>';
+      } finally {
+        hideLoading();
       }
     }
 
@@ -233,7 +259,8 @@
       const requestId=++districtRequestId;
       const name=districtSelect.selectedOptions[0]?.textContent||"All Districts";
       document.getElementById("reportDistrictHeading").textContent=name;
-      document.getElementById("vleSubheading").textContent=activeDistrict?`Loading VLE responses for ${name}…`:"Select a district above to view individual responses.";
+      updateSummaryScope();
+      document.getElementById("vleSubheading").textContent=activeDistrict?`Loading VLE records for ${name}…`:"Select a district to view its VLE records.";
       fillBlockOptions(activeDistrict||"");
       districtRows=[];
       searchFilter.disabled=!activeDistrict;
@@ -242,14 +269,16 @@
       document.getElementById("printBtn").disabled=true;
       renderDistrictSummary();
       if(!activeDistrict){
-        document.getElementById("vleTableWrap").innerHTML='<div class="empty">VLE-wise detail ke liye district select karein.</div>';
+        hideLoading();
+        document.getElementById("vleTableWrap").innerHTML='<div class="empty">Select a district to view VLE details.</div>';
         document.getElementById("csvBtn").disabled=true;
         document.getElementById("printBtn").disabled=true;
-        setStatus("Overall aur district-wise summary neeche dikh rahi hai.","success");
+        setStatus("The statewide district summary is displayed in the first tab.","success");
         return;
       }
-      setStatus(`${name} ke VLE records load ho rahe hain…`);
-      document.getElementById("vleTableWrap").innerHTML='<div class="empty">VLE responses load ho rahe hain…</div>';
+      setStatus(`Loading VLE records for ${name}…`);
+      showLoading(`Loading VLE records for ${name}…`);
+      document.getElementById("vleTableWrap").innerHTML='<div class="empty">Loading VLE records…</div>';
       try {
         const response=await fetch(`${REPORT_API_URL}?action=districtReport&districtCode=${encodeURIComponent(activeDistrict)}&_=${Date.now()}`);
         const result=await response.json();
@@ -263,8 +292,10 @@
         setStatus(`${districtRows.length} VLE records loaded for ${name}.`,"success");
       } catch(error) {
         if(requestId!==districtRequestId)return;
-        setStatus("VLE details load nahi hue: "+error.message,"error");
-        document.getElementById("vleTableWrap").innerHTML='<div class="empty">VLE details load nahi ho saki.</div>';
+        setStatus("Unable to load VLE records: "+error.message,"error");
+        document.getElementById("vleTableWrap").innerHTML='<div class="empty">VLE records could not be loaded.</div>';
+      } finally {
+        if(requestId===districtRequestId)hideLoading();
       }
     }
 
@@ -285,11 +316,11 @@
 
     function renderVleTable() {
       const wrap=document.getElementById("vleTableWrap");
-      if(!activeDistrict){wrap.innerHTML='<div class="empty">VLE-wise detail ke liye district select karein.</div>';return;}
+      if(!activeDistrict){wrap.innerHTML='<div class="empty">Select a district to view VLE details.</div>';return;}
       const filteredRows=getFilteredVleRows();
       const rows=sortedRows(filteredRows,detailSort);
       document.getElementById("detailCount").textContent=`Showing ${filteredRows.length.toLocaleString()} of ${districtRows.length.toLocaleString()} VLEs`;
-      if(!rows.length){wrap.innerHTML='<div class="empty">Selected filters ke liye VLE record nahi mila.</div>';return;}
+      if(!rows.length){wrap.innerHTML='<div class="empty">No VLE records match the selected filters.</div>';return;}
       const body=rows.map(r=>`<tr><td>${escapeHtml(r.cscId)}</td><td>${escapeHtml(r.vleName)}</td><td>${escapeHtml(r.blockName)}</td><td>${escapeHtml(r.gpName)}</td><td>${responsePill(r.matmInterest)}</td><td>${escapeHtml(r.matmExpectedDate)}</td><td>${responsePill(r.printerInterest)}</td><td>${escapeHtml(r.printerExpectedDate)}</td><td>${responsePill(r.attendanceStatus)}</td></tr>`).join("");
       wrap.innerHTML=`<table><thead><tr>${detailHeader("CSC ID","cscId")}${detailHeader("VLE Name","vleName")}${detailHeader("Block","blockName")}${detailHeader("GP","gpName")}${detailHeader("Micro ATM Order","matmInterest")}${detailHeader("mATM Expected Date","matmExpectedDate")}${detailHeader("Thermal Printer Order","printerInterest")}${detailHeader("Printer Expected Date","printerExpectedDate")}${detailHeader("Attendance","attendanceStatus")}</tr></thead><tbody>${body}</tbody></table>`;
     }
