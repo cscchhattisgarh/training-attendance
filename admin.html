@@ -6,9 +6,18 @@
   <title>Attendance Admin Panel - Dynamic Sessions</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 520px; }
-    h2 { margin-top: 0; color: #1e293b; text-align: center; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; min-height: 100vh; color:#0f172a; }
+    .admin-shell { width:100%; max-width:1100px; margin:0 auto; }
+    .admin-header { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:20px 24px; margin-bottom:20px; border-radius:14px; color:#fff; background:linear-gradient(110deg,#1e3a8a,#2563eb); box-shadow:0 5px 16px rgba(37,99,235,.22); }
+    .admin-header h1 { margin:0 0 5px; font-size:22px; }
+    .admin-header p { margin:0; font-size:13px; opacity:.9; }
+    .panel-card { background:#fff; padding:22px; border:1px solid #dbe4f0; border-radius:13px; box-shadow:0 4px 14px rgba(15,23,42,.06); margin-bottom:18px; }
+    .panel-card h2 { margin:0 0 16px; padding-bottom:11px; border-bottom:1px solid #dbe4f0; color:#0f172a; text-align:left; font-size:17px; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:4px; }
+    .helper-text { margin:10px 0 0; font-size:12px; color:#64748b; }
+    .btn-refresh { flex:0 0 auto; padding:12px 18px; color:#1e293b; background:#eff6ff; }
+    .btn-publish { width:100%; margin-top:16px; color:#fff; background:#2563eb; }
+    .btn-publish:disabled { background:#94a3b8; }    h2 { margin-top: 0; color: #1e293b; text-align: center; }
     label { font-weight: bold; font-size: 14px; color: #334155; display: block; margin: 15px 0 5px; }
     label span { color: #dc2626; }
     input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; outline: none; background: white; }
@@ -34,6 +43,11 @@
       max-height: 280px; overflow-y: auto;
     }
     .current-box h4 { margin: 0 0 10px 0; color: #0f766e; font-size: 14px; }
+    .sessions-table { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+    .sessions-table th, .sessions-table td { padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; }
+    .sessions-table th { background:#f8fafc; color:#334155; }
+    .table-wrap { overflow-x:auto; }
+    @media (max-width:700px) { body { padding:12px; } .admin-header { align-items:flex-start; flex-direction:column; padding:18px; } .form-grid { grid-template-columns:1fr; } .panel-card { padding:17px; } }
     .vle-link-box {
       background: #e0f2fe; border: 1px solid #bae6fd; padding: 8px 10px;
       border-radius: 6px; margin-bottom: 12px; font-size: 13px; color: #0369a1;
@@ -67,62 +81,58 @@
 </head>
 <body>
 
-  <div class="card">
-    <h2>⚙️ CSC Attendance Admin Panel</h2>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <div><h1>⚙️ CSC Training Attendance — Admin Panel</h1><p>CSC State Office Chhattisgarh · Session &amp; Category Scheduler</p></div>
+      <button type="button" class="btn-refresh" onclick="fetchCurrentConfig()">🔄 Refresh Sessions</button>
+    </header>
+    <section class="panel-card">
+      <h2>1. Admin Verification</h2>
+      <label for="token">Admin PIN / Password <span>*</span></label>
+      <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="current-password" required>
+      <p class="helper-text">Is field mein GitHub PAT daalein. Token browser mein locally save rahega.</p>
+    </section>
+    <section class="panel-card">
+      <h2>2. Schedule New Training Session</h2>
+      <form id="adminForm" onsubmit="event.preventDefault(); validateAndPrompt();">
+        <div class="form-grid">
+          <div><label for="trainingSelect">Training Category <span>*</span></label>
+            <select id="trainingSelect" onchange="handleSelectionChange()" required>
+              <option value="" disabled selected>-- Select Category --</option>
+              <option value="labour_ekyc">Labour eKYC Training (Web Form)</option>
+              <option value="wifi_choupal">WiFi Choupal Training (Google Form)</option>
+              <option value="adsk_micro_atm_thermal_printer_order">ADSK - MICRO ATM &amp; THERMAL PRINTER ORDER</option>
+            </select>
+          </div>
 
-    <form id="adminForm" onsubmit="event.preventDefault(); validateAndPrompt();">
-      <label for="token">GitHub Personal Access Token (PAT): <span>*</span></label>
-      <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" required>
-
-      <label for="trainingSelect">Select Training Topic: <span>*</span></label>
-      <select id="trainingSelect" onchange="handleSelectionChange()" required>
-        <option value="" disabled selected>-- Select Topic --</option>
-        <option value="labour_ekyc">Labour eKYC Training (Web Form)</option>
-        <option value="wifi_choupal">WiFi Choupal Training (Google Form)</option>
-        <option value="adsk_micro_atm_thermal_printer_order">ADSK - MICRO ATM &amp; THERMAL PRINTER ORDER</option>
-      </select>
-
-      <label for="trainerSelect">Select Trainer: <span>*</span></label>
-      <select id="trainerSelect" onchange="handleSelectionChange()" required>
-        <option value="" disabled selected>-- Select Trainer --</option>
-        <option value="neeraj_hardev">Neeraj Hardev</option>
-        <option value="pushpen_kumar_verma">Pushpen Kumar Verma</option>
-        <option value="krishnandan_kumar">Krishnandan Kumar</option>
-        <option value="neeta_sahu">Neeta Sahu</option>
-        <option value="suruchi_shesh">Suruchi Shesh</option>
-        <option value="ravikant_sahu">Ravikant Sahu</option>
-        <option value="rahul_soni">Rahul Soni</option>
-        <option value="narayan_devnath">Narayan Devnath</option>
-        <option value="vikas_nayak">Vikas Nayak</option>
-        <option value="surendra_das">Surendra Das</option>
-      </select>
-
-      <label for="password">Set Password (6 Digits): <span>*</span></label>
-      <div class="password-input-row">
-        <input type="text" id="password" maxlength="6" pattern="\d{6}" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6)" placeholder="123456" disabled required>
-        <button type="button" class="btn-auto-password" id="autoPasswordBtn" onclick="generateRandomPassword()" disabled>Auto</button>
-      </div>
-
-      <label for="startTime">Start Date & Time (IST): <span>*</span></label>
-      <input type="datetime-local" id="startTime" onchange="handleStartTimeChange()" disabled required>
-
-      <label for="expiry">Expiry Date & Time (IST): <span>*</span></label>
-      <input type="datetime-local" id="expiry" disabled required>
-
-      <div class="btn-group">
-        <button type="button" class="btn-fetch" id="fetchBtn" onclick="fetchCurrentConfig()">🔍 View Active Sessions</button>
-        <button type="submit" class="btn-save" id="saveBtn" disabled>💾 Save & Deploy</button>
-      </div>
-    </form>
-
-    <div id="status" class="status"></div>
-
-    <div id="currentConfigBox" class="current-box">
-      <h4>📌 Live Active Sessions:</h4>
-      <div id="liveContent">Fetching...</div>
-    </div>
-  </div>
-
+          <div><label for="trainerSelect">Trainer / Host Name <span>*</span></label>
+            <select id="trainerSelect" onchange="handleSelectionChange()" required>
+              <option value="" disabled selected>-- Select Trainer --</option>
+              <option value="neeraj_hardev">Neeraj Hardev</option><option value="pushpen_kumar_verma">Pushpen Kumar Verma</option>
+              <option value="krishnandan_kumar">Krishnandan Kumar</option><option value="neeta_sahu">Neeta Sahu</option>
+              <option value="suruchi_shesh">Suruchi Shesh</option><option value="ravikant_sahu">Ravikant Sahu</option>
+              <option value="rahul_soni">Rahul Soni</option><option value="narayan_devnath">Narayan Devnath</option>
+              <option value="vikas_nayak">Vikas Nayak</option><option value="surendra_das">Surendra Das</option>
+            </select>
+          </div>
+          <div><label for="password">6-Digit Numeric Password <span>*</span></label>
+            <div class="password-input-row">
+              <input type="text" id="password" maxlength="6" pattern="\d{6}" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6)" placeholder="123456" disabled required>
+              <button type="button" class="btn-auto-password" id="autoPasswordBtn" onclick="generateRandomPassword()" disabled>🎲 Auto</button>
+            </div>
+          </div>
+          <div><label for="startTime">Start Date &amp; Time (IST) <span>*</span></label><input type="datetime-local" id="startTime" onchange="handleStartTimeChange()" disabled required></div>
+          <div><label for="expiry">Expiry Date &amp; Time (IST) <span>*</span></label><input type="datetime-local" id="expiry" disabled required></div>
+        </div>
+        <button type="submit" class="btn-publish" id="saveBtn" disabled>➕ Publish Training Session to Live Portal</button>
+      </form>
+      <div id="status" class="status"></div>
+    </section>
+    <section class="panel-card">
+      <h2>3. Scheduled &amp; Active Sessions (<span id="activeCount">0</span>)</h2>
+      <div id="currentConfigBox" class="current-box"><div id="liveContent">GitHub PAT daal kar Refresh Sessions par click karein.</div></div>
+    </section>
+  </main>
   <!-- Existing Session Overwrite Confirmation Popup -->
   <div class="modal-overlay" id="conflictModal">
     <div class="modal-card">
@@ -149,204 +159,166 @@
   </div>
 
   <script>
-    const GITHUB_USERNAME = "cscchhattisgarh"; 
-    const REPO_NAME = "labour-ekcy-training-attendance"; 
-    const FILE_PATH = "config.json"; 
+    const GITHUB_USERNAME = "cscchhattisgarh";
+    const REPO_NAME = "labour-ekcy-training-attendance";
+    const FILE_PATH = "config.json";
     const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${FILE_PATH}`;
 
     let cachedConfig = null;
     let pendingOverwriteId = null;
-
-    function utf8ToBase64(str) {
-      const bytes = new TextEncoder().encode(str);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary);
-    }
-
-    function base64ToUtf8(str) {
-      const binary = atob(str.replace(/\s/g, ''));
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return new TextDecoder().decode(bytes);
-    }
+    let lastAutoTrainingTitle = "";
 
     document.getElementById("token").value = localStorage.getItem("gh_pat") || "";
 
     function getCurrentDateTimeLocal() {
       const now = new Date();
-      return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    }
-
-    function handleSelectionChange() {
-      const topic = document.getElementById("trainingSelect").value;
-      const trainer = document.getElementById("trainerSelect").value;
-      const isSelected = !!(topic && trainer);
-
-      const startTimeInput = document.getElementById("startTime");
-      const expiryInput = document.getElementById("expiry");
-
-      document.getElementById("password").disabled = !isSelected;
-      document.getElementById("autoPasswordBtn").disabled = !isSelected;
-      startTimeInput.disabled = !isSelected;
-      expiryInput.disabled = !isSelected;
-      document.getElementById("saveBtn").disabled = !isSelected;
-
-      const nowFormatted = getCurrentDateTimeLocal();
-      startTimeInput.min = nowFormatted;
-      if (isSelected && !startTimeInput.value) {
-        startTimeInput.value = nowFormatted;
-        expiryInput.value = addMinutesToDateTimeLocal(nowFormatted, 20);
-      }
-      expiryInput.min = startTimeInput.value || nowFormatted;
+      return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}T${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
     }
 
     function addMinutesToDateTimeLocal(value, minutes) {
       const date = new Date(value);
       date.setMinutes(date.getMinutes() + minutes);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}T${String(date.getHours()).padStart(2,"0")}:${String(date.getMinutes()).padStart(2,"0")}`;
     }
 
     function generateRandomPassword() {
-      const passwordInput = document.getElementById("password");
+      const input = document.getElementById("password");
       const range = 900000;
       if (window.crypto && window.crypto.getRandomValues) {
         const max = 0x100000000;
         const limit = Math.floor(max / range) * range;
         const values = new Uint32Array(1);
         do { window.crypto.getRandomValues(values); } while (values[0] >= limit);
-        passwordInput.value = String(100000 + (values[0] % range));
+        input.value = String(100000 + (values[0] % range));
       } else {
-        passwordInput.value = String(100000 + Math.floor(Math.random() * range));
+        input.value = String(100000 + Math.floor(Math.random() * range));
       }
-      passwordInput.focus();
+      input.focus();
+    }
+
+    function handleSelectionChange() {
+      const topic = document.getElementById("trainingSelect").value;
+      const trainer = document.getElementById("trainerSelect").value;
+      const isSelected = !!(topic && trainer);
+      const start = document.getElementById("startTime");
+      const expiry = document.getElementById("expiry");
+      const now = getCurrentDateTimeLocal();
+
+      document.getElementById("password").disabled = !isSelected;
+      document.getElementById("autoPasswordBtn").disabled = !isSelected;
+      start.disabled = !isSelected;
+      expiry.disabled = !isSelected;
+      document.getElementById("saveBtn").disabled = !isSelected;
+      start.min = now;
+      if (isSelected && !start.value) {
+        start.value = now;
+        expiry.value = addMinutesToDateTimeLocal(now, 20);
+      }
+      expiry.min = start.value || now;
     }
 
     function handleStartTimeChange() {
-      const startVal = document.getElementById("startTime").value;
-      const expiryInput = document.getElementById("expiry");
-      if (startVal) {
-        expiryInput.min = startVal;
-        expiryInput.value = addMinutesToDateTimeLocal(startVal, 20);
-      }
+      const start = document.getElementById("startTime").value;
+      const expiry = document.getElementById("expiry");
+      if (!start) return;
+      expiry.min = start;
+      expiry.value = addMinutesToDateTimeLocal(start, 20);
     }
-    function formatISTDisplay(isoStr) {
-      if (!isoStr) return "Not Set";
-      try {
-        const parts = isoStr.split("T");
-        if (parts.length < 2) return isoStr;
-        const dateParts = parts[0].split("-");
-        const timeParts = parts[1].split("+")[0];
-        return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}, ${timeParts} IST`;
-      } catch (e) { return isoStr; }
+
+    function formatISTDisplay(value) {
+      if (!value) return "Not Set";
+      const parts = String(value).split("T");
+      if (parts.length < 2) return value;
+      const date = parts[0].split("-");
+      return `${date[2]}/${date[1]}/${date[0]}, ${parts[1].split("+")[0]} IST`;
+    }
+
+    function parseSessionDate(value) {
+      if (!value) return null;
+      let clean = String(value).trim();
+      if (!clean.includes("+") && !clean.includes("Z")) clean += ":00+05:30";
+      return new Date(clean);
     }
 
     function getTopicLabel(topicId) {
       const labels = {
-        labour_ekyc: 'Labour eKYC (Web Form)',
-        wifi_choupal: 'WiFi Choupal (Google Form)',
-        adsk_micro_atm_thermal_printer_order: 'ADSK - MICRO ATM & THERMAL PRINTER ORDER'
+        labour_ekyc: "Labour eKYC (Web Form)",
+        wifi_choupal: "WiFi Choupal (Google Form)",
+        adsk_micro_atm_thermal_printer_order: "ADSK - MICRO ATM & THERMAL PRINTER ORDER"
       };
-      return labels[topicId] || topicId || 'Unknown Training';
+      return labels[topicId] || topicId || "Unknown Training";
     }
+
+    function base64ToUtf8(value) {
+      const binary = atob(String(value).replace(/\s/g, ""));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+
+    function utf8ToBase64(value) {
+      const bytes = new TextEncoder().encode(value);
+      let binary = "";
+      bytes.forEach(byte => binary += String.fromCharCode(byte));
+      return btoa(binary);
+    }
+
+    function githubHeaders(token) {
+      return { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" };
+    }
+
     async function fetchCurrentConfig(silent = false) {
       const token = document.getElementById("token").value.trim();
       const status = document.getElementById("status");
       const box = document.getElementById("currentConfigBox");
       const liveContent = document.getElementById("liveContent");
-
-      if (!silent) {
-        status.textContent = "Fetching & Cleaning Live Config...";
-        status.className = "status";
+      const refreshBtn = document.querySelector(".btn-refresh");
+      if (!token) {
+        if (!silent) { status.textContent = "Kripya Admin PIN / Password field mein GitHub PAT daalein."; status.className = "status error"; }
+        return;
       }
-
+      if (!silent) {
+        status.textContent = "Active sessions fetch ho rahe hain…";
+        status.className = "status";
+        if (refreshBtn) refreshBtn.disabled = true;
+      }
       try {
-        const headers = token ? { "Authorization": `token ${token}` } : {};
-        const res = await fetch(API_URL + '?_=' + Date.now(), { headers });
-
-        if (res.ok) {
-          const getData = await res.json();
-          const sha = getData.sha;
-          cachedConfig = JSON.parse(base64ToUtf8(getData.content));
-
-          if (!cachedConfig.trainings || !Array.isArray(cachedConfig.trainings)) {
-            cachedConfig.trainings = [];
-          }
-
-          const nowTime = new Date();
-          const initialCount = cachedConfig.trainings.length;
-
-          const activeTrainings = cachedConfig.trainings.filter(t => {
-            if (!t.expiry) return false;
-            let expDateStr = t.expiry.trim();
-            if (!expDateStr.includes('+') && !expDateStr.includes('Z')) {
-              expDateStr += ":00+05:30";
-            }
-            const exp = new Date(expDateStr);
-            return !isNaN(exp.getTime()) && exp > nowTime;
-          });
-
-          if (activeTrainings.length !== initialCount && token) {
-            cachedConfig.trainings = activeTrainings;
-            const contentEncoded = utf8ToBase64(JSON.stringify(cachedConfig, null, 2));
-
-            fetch(API_URL, {
-              method: "PUT",
-              headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                message: "Auto-cleaned expired sessions via View Active Sessions",
-                content: contentEncoded,
-                sha: sha
-              })
-            }).catch(err => console.error("Auto-clean error:", err));
-          } else {
-            cachedConfig.trainings = activeTrainings;
-          }
-
-          if (!silent) {
-            let html = `<div class="vle-link-box">
-              🔗 <b>Attendance Link for VLEs:</b><br>
-              <a href="https://cscchhattisgarh.github.io/training-attendance/" target="_blank">
-                https://cscchhattisgarh.github.io/training-attendance/
-              </a>
-            </div>`;
-
-            if (cachedConfig.trainings.length > 0) {
-              cachedConfig.trainings.forEach(t => {
-                html += `<div class="training-item">
-                  <strong style="color:#0f766e;">📌 ${t.name}:</strong><br>
-                  <b>Topic:</b> ${getTopicLabel(t.topic_id)}<br>
-                  <b>Password:</b> ${t.password || 'N/A'}<br>
-                  <b>Start:</b> ${formatISTDisplay(t.start_time)}<br>
-                  <b>Expiry:</b> ${formatISTDisplay(t.expiry)}
-                </div>`;
-              });
-            } else {
-              html += "<div style='color: #64748b; padding: 6px 0;'>Koi active session uplabdh nahi hai (sab expire ho chuke hain).</div>";
-            }
-
-            liveContent.innerHTML = html;
-            box.style.display = "block";
-            status.textContent = "✅ Active sessions fetched & cleaned!";
-            status.className = "status success";
-          }
-        } else if (!silent) {
-          status.textContent = "❌ Error fetching config! Check Token permissions.";
-          status.className = "status error";
+        const response = await fetch(API_URL + "?_=" + Date.now(), { headers: githubHeaders(token) });
+        if (!response.ok) throw new Error("GitHub se config fetch nahi hua (" + response.status + "). PAT permissions check karein.");
+        const file = await response.json();
+        const config = JSON.parse(base64ToUtf8(file.content));
+        const now = new Date();
+        const sessions = (config.trainings || []).filter(session => {
+          const expiry = parseSessionDate(session.expiry);
+          return expiry && !isNaN(expiry.getTime()) && expiry > now;
+        });
+        cachedConfig = { trainings: sessions };
+        document.getElementById("activeCount").textContent = sessions.length;
+        const vleLink = `<div class="vle-link-box">🔗 <b>Attendance Link for VLEs:</b><br><a href="https://cscchhattisgarh.github.io/training-attendance/" target="_blank">https://cscchhattisgarh.github.io/training-attendance/</a></div>`;
+        if (sessions.length) {
+          const rows = sessions.map(session => {
+            const start = parseSessionDate(session.start_time);
+            const state = start && start > now ? "Scheduled" : "Active";
+            return `<tr><td>${getTopicLabel(session.topic_id)}<br><b>${session.name || ""}</b></td><td>${session.trainer_name || "—"}</td><td>${session.password || "—"}</td><td>${formatISTDisplay(session.start_time)}</td><td>${formatISTDisplay(session.expiry)}</td><td>${state}</td></tr>`;
+          }).join("");
+          liveContent.innerHTML = `${vleLink}<div class="table-wrap"><table class="sessions-table"><thead><tr><th>Category / Title</th><th>Trainer</th><th>Password</th><th>Start (IST)</th><th>Expiry (IST)</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        } else {
+          liveContent.innerHTML = `${vleLink}<div style="color:#64748b;padding:10px 0;">Koi active session uplabdh nahi hai.</div>`;
         }
-      } catch (e) {
+        box.style.display = "block";
+        if (!silent) { status.textContent = "✅ Active sessions fetched!"; status.className = "status success"; }
+      } catch (err) {
         if (!silent) {
-          status.textContent = "❌ Network Error!";
+          status.textContent = "❌ " + err.message;
           status.className = "status error";
+          box.style.display = "block";
+          liveContent.textContent = "Sessions load nahi hue. PAT aur repository permissions check karein.";
         }
+      } finally {
+        if (refreshBtn) refreshBtn.disabled = false;
       }
     }
 
-    // Modal Control Functions
     function closeConflictModal() {
       document.getElementById("conflictModal").style.display = "none";
       pendingOverwriteId = null;
@@ -361,208 +333,145 @@
       executeSaveSession(pendingOverwriteId);
     }
 
-    // Step 1: Pre-check if an active session already exists for this Trainer & Topic
-    // Step 1: TIME OVERLAP CHECK (Sirf tabhi popup aayega jab time aapas me takraye)
     async function validateAndPrompt() {
       const token = document.getElementById("token").value.trim();
-      const topicValue = document.getElementById("trainingSelect").value;
-      const trainerValue = document.getElementById("trainerSelect").value;
-      const pwd = document.getElementById("password").value.trim();
-      const startVal = document.getElementById("startTime").value;
-      const expVal = document.getElementById("expiry").value;
+      const topic = document.getElementById("trainingSelect").value;
+      const trainer = document.getElementById("trainerSelect").value;
+      const password = document.getElementById("password").value.trim();
+      const startValue = document.getElementById("startTime").value;
+      const expiryValue = document.getElementById("expiry").value;
       const status = document.getElementById("status");
       const saveBtn = document.getElementById("saveBtn");
-
-      if (!token || !topicValue || !trainerValue || !pwd || !startVal || !expVal) {
-        status.textContent = "❌ Kripya sabhi mandatory fields bharein!";
+      if (!token || !topic || !trainer || !password || !startValue || !expiryValue) {
+        status.textContent = "❌ Kripya sabhi mandatory fields bharein.";
         status.className = "status error";
         return;
       }
-
-      if (!/^\d{6}$/.test(pwd)) {
-        status.textContent = "❌ Password keval 6 numeric digits ka hona chahiye!";
+      if (!/^\d{6}$/.test(password)) {
+        status.textContent = "❌ Password keval 6 numeric digits ka hona chahiye.";
         status.className = "status error";
         return;
       }
-
-      const formattedStart = `${startVal}:00+05:30`;
-      const formattedExpiry = `${expVal}:00+05:30`;
-      const newStartTime = new Date(formattedStart);
-      const newExpiryTime = new Date(formattedExpiry);
-
-      const nowBuffer = new Date(Date.now() - 2 * 60 * 1000);
-      if (newStartTime < nowBuffer) {
-        status.textContent = "❌ Start Date & Time aane wale samay ka hona chahiye!";
+      const newStart = new Date(`${startValue}:00+05:30`);
+      const newExpiry = new Date(`${expiryValue}:00+05:30`);
+      if (newStart < new Date(Date.now() - 2 * 60 * 1000)) {
+        status.textContent = "❌ Start Date & Time aane wale samay ka hona chahiye.";
         status.className = "status error";
         return;
       }
-
-      if (newStartTime >= newExpiryTime) {
-        status.textContent = "❌ Expiry Date/Time Start Date/Time ke baad ka hona chahiye!";
+      if (newStart >= newExpiry) {
+        status.textContent = "❌ Expiry Date/Time start ke baad hona chahiye.";
         status.className = "status error";
         return;
       }
-
       saveBtn.disabled = true;
-      status.textContent = "Checking time slot availability...";
+      status.textContent = "Checking time slot availability…";
       status.className = "status";
-
       try {
-        const headers = token ? { "Authorization": `token ${token}` } : {};
-        const res = await fetch(API_URL + '?_=' + Date.now(), { headers });
-
-        if (!res.ok) {
-          executeSaveSession(null);
-          return;
-        }
-
-        const getData = await res.json();
-        const config = JSON.parse(base64ToUtf8(getData.content));
+        const response = await fetch(API_URL + "?_=" + Date.now(), { headers: githubHeaders(token) });
+        if (!response.ok) throw new Error("GitHub config fetch failed (" + response.status + "). PAT permissions check karein.");
+        const file = await response.json();
+        const config = JSON.parse(base64ToUtf8(file.content));
         const now = new Date();
-
-        const activeSessions = (config.trainings || []).filter(t => {
-          if (!t.expiry) return false;
-          let expDateStr = t.expiry.trim();
-          if (!expDateStr.includes('+') && !expDateStr.includes('Z')) expDateStr += ":00+05:30";
-          const exp = new Date(expDateStr);
-          return !isNaN(exp.getTime()) && exp > now;
+        const activeSessions = (config.trainings || []).filter(session => {
+          const expiry = parseSessionDate(session.expiry);
+          return expiry && !isNaN(expiry.getTime()) && expiry > now;
         });
-
-        const prefix = `${topicValue}_${trainerValue}`;
-        
-        // Exact Overlap Check: Dono time range aapas me cross ho rahi hain ya nahi
-        const overlappingSession = activeSessions.find(t => {
-          if (!t.id || !t.id.startsWith(prefix)) return false;
-
-          let sStr = t.start_time.trim();
-          let eStr = t.expiry.trim();
-          if (!sStr.includes('+') && !sStr.includes('Z')) sStr += ":00+05:30";
-          if (!eStr.includes('+') && !eStr.includes('Z')) eStr += ":00+05:30";
-
-          const existingStart = new Date(sStr);
-          const existingExpiry = new Date(eStr);
-
-          // Overlap condition: (StartA < ExpiryB) AND (ExpiryA > StartB)
-          return (newStartTime < existingExpiry && newExpiryTime > existingStart);
+        const prefix = `${topic}_${trainer}`;
+        const overlapping = activeSessions.find(session => {
+          if (!session.id || !session.id.startsWith(prefix)) return false;
+          const existingStart = parseSessionDate(session.start_time);
+          const existingExpiry = parseSessionDate(session.expiry);
+          return existingStart && existingExpiry && newStart < existingExpiry && newExpiry > existingStart;
         });
-
-        if (overlappingSession) {
-          pendingOverwriteId = overlappingSession.id;
-          document.getElementById("conflictDetailsBox").innerHTML = `
-            <b>Topic:</b> ${overlappingSession.name}<br>
-            <b>Password:</b> ${overlappingSession.password}<br>
-            <b>Start Time:</b> ${formatISTDisplay(overlappingSession.start_time)}<br>
-            <b>Expiry Time:</b> ${formatISTDisplay(overlappingSession.expiry)}
-          `;
+        if (overlapping) {
+          pendingOverwriteId = overlapping.id;
+          document.getElementById("conflictDetailsBox").innerHTML = `<b>Topic:</b> ${overlapping.name}<br><b>Password:</b> ${overlapping.password}<br><b>Start Time:</b> ${formatISTDisplay(overlapping.start_time)}<br><b>Expiry Time:</b> ${formatISTDisplay(overlapping.expiry)}`;
           document.getElementById("conflictModal").style.display = "flex";
           status.textContent = "";
         } else {
-          // Time alag hai, bina kisi popup ke direct save hoga!
           executeSaveSession(null);
         }
       } catch (err) {
-        executeSaveSession(null);
+        status.textContent = "❌ " + err.message;
+        status.className = "status error";
+        saveBtn.disabled = false;
       }
     }
-    // Step 2: Final Save to GitHub (Overwrite if ID provided, else Append fresh)
-    async function executeSaveSession(overwriteTargetId) {
+
+    async function executeSaveSession(overwriteId) {
       const token = document.getElementById("token").value.trim();
-      const topicValue = document.getElementById("trainingSelect").value;
-      const trainerValue = document.getElementById("trainerSelect").value;
-      const pwd = document.getElementById("password").value.trim();
-      const startVal = document.getElementById("startTime").value;
-      const expVal = document.getElementById("expiry").value;
+      const topic = document.getElementById("trainingSelect").value;
+      const trainer = document.getElementById("trainerSelect").value;
+      const trainerName = document.getElementById("trainerSelect").selectedOptions[0].textContent;
+      const password = document.getElementById("password").value.trim();
+      const startValue = document.getElementById("startTime").value;
+      const expiryValue = document.getElementById("expiry").value;
       const status = document.getElementById("status");
       const saveBtn = document.getElementById("saveBtn");
-
       const sessionNames = {
         labour_ekyc: "Labour eKYC Training Attendance Form",
         wifi_choupal: "WiFi Choupal Training Attendance Form",
         adsk_micro_atm_thermal_printer_order: "ADSK - MICRO ATM & THERMAL PRINTER ORDER"
       };
-      const sessionName = sessionNames[topicValue] || topicValue;
-
-      const formattedStart = `${startVal}:00+05:30`;
-      const formattedExpiry = `${expVal}:00+05:30`;
-
+      const entry = {
+        id: `${topic}_${trainer}_${Date.now()}`,
+        topic_id: topic,
+        name: sessionNames[topic] || getTopicLabel(topic),
+        trainer_name: trainerName,
+        password: password,
+        start_time: `${startValue}:00+05:30`,
+        expiry: `${expiryValue}:00+05:30`
+      };
       localStorage.setItem("gh_pat", token);
       saveBtn.disabled = true;
-      status.textContent = overwriteTargetId ? "Overwriting previous session..." : "Updating & Deploying Session...";
+      status.textContent = overwriteId ? "Purana session overwrite ho raha hai…" : "Session publish ho raha hai…";
       status.className = "status";
-
       try {
-        const getRes = await fetch(API_URL, { headers: { "Authorization": `token ${token}` } });
+        const getResponse = await fetch(API_URL, { headers: githubHeaders(token) });
         let sha = "";
-        let existingConfig = { trainings: [] };
-
-        if (getRes.ok) {
-          const getData = await getRes.json();
-          sha = getData.sha;
-          existingConfig = JSON.parse(base64ToUtf8(getData.content));
+        let config = { trainings: [] };
+        if (getResponse.ok) {
+          const file = await getResponse.json();
+          sha = file.sha || "";
+          config = JSON.parse(base64ToUtf8(file.content));
+        } else if (getResponse.status !== 404) {
+          throw new Error("GitHub config read failed (" + getResponse.status + ")");
         }
-
-        if (!existingConfig.trainings || !Array.isArray(existingConfig.trainings)) {
-          existingConfig.trainings = [];
-        }
-
-        const nowTime = new Date();
-        existingConfig.trainings = existingConfig.trainings.filter(t => {
-          if (!t.expiry) return false;
-          let expDateStr = t.expiry.trim();
-          if (!expDateStr.includes('+') && !expDateStr.includes('Z')) expDateStr += ":00+05:30";
-          const exp = new Date(expDateStr);
-          return !isNaN(exp.getTime()) && exp > nowTime;
+        if (!Array.isArray(config.trainings)) config.trainings = [];
+        const now = new Date();
+        config.trainings = config.trainings.filter(session => {
+          const expiry = parseSessionDate(session.expiry);
+          return expiry && !isNaN(expiry.getTime()) && expiry > now;
         });
-
-        const newId = `${topicValue}_${trainerValue}_${Date.now()}`;
-        const newEntry = {
-          id: newId,
-          topic_id: topicValue,
-          name: sessionName,
-          password: pwd,
-          start_time: formattedStart,
-          expiry: formattedExpiry
-        };
-
-        if (overwriteTargetId) {
-          const targetIndex = existingConfig.trainings.findIndex(t => t.id === overwriteTargetId);
-          if (targetIndex !== -1) {
-            existingConfig.trainings[targetIndex] = newEntry;
-          } else {
-            existingConfig.trainings.push(newEntry);
-          }
+        if (overwriteId) {
+          const index = config.trainings.findIndex(session => session.id === overwriteId);
+          if (index >= 0) config.trainings[index] = entry;
+          else config.trainings.push(entry);
         } else {
-          existingConfig.trainings.push(newEntry);
+          config.trainings.push(entry);
         }
-
-        const contentEncoded = utf8ToBase64(JSON.stringify(existingConfig, null, 2));
-
-        const putRes = await fetch(API_URL, {
+        const putResponse = await fetch(API_URL, {
           method: "PUT",
-          headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+          headers: { ...githubHeaders(token), "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: `Deployed: ${sessionName} (Trainer: ${trainerValue})`,
-            content: contentEncoded,
-            sha: sha ? sha : undefined
+            message: `Deployed: ${entry.name} (Trainer: ${trainer})`,
+            content: utf8ToBase64(JSON.stringify(config, null, 2)),
+            sha: sha || undefined
           })
         });
-
-        if (putRes.ok) {
-          status.textContent = "✅ Session Successfully Live & Deployed!";
-          status.className = "status success";
-
-          document.getElementById("password").value = "";
-          document.getElementById("startTime").value = "";
-          document.getElementById("expiry").value = "";
-
-          fetchCurrentConfig();
-        } else {
-          const errData = await putRes.json();
-          status.textContent = "❌ Error: " + (errData.message || "Failed to update");
-          status.className = "status error";
+        if (!putResponse.ok) {
+          const error = await putResponse.json();
+          throw new Error(error.message || "GitHub config update failed");
         }
+        status.textContent = "✅ Training session successfully live & deployed!";
+        status.className = "status success";
+        document.getElementById("password").value = "";
+        document.getElementById("startTime").value = "";
+        document.getElementById("expiry").value = "";
+        fetchCurrentConfig(true);
       } catch (err) {
-        status.textContent = "❌ Network Error!";
+        status.textContent = "❌ " + (err.message || "Network Error");
         status.className = "status error";
       } finally {
         saveBtn.disabled = false;
@@ -572,5 +481,3 @@
   </script>
 </body>
 </html>
-
-
