@@ -14,6 +14,8 @@
     .panel-card { background:#fff; padding:22px; border:1px solid #dbe4f0; border-radius:13px; box-shadow:0 4px 14px rgba(15,23,42,.06); margin-bottom:18px; }
     .panel-card h2 { margin:0 0 16px; padding-bottom:11px; border-bottom:1px solid #dbe4f0; color:#0f172a; text-align:left; font-size:17px; }
     .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:4px; }
+    .form-grid > div { min-width:0; }
+    .form-grid .password-field { grid-column:1 / -1; }
     .helper-text { margin:10px 0 0; font-size:12px; color:#64748b; }
     .btn-refresh { flex:0 0 auto; padding:12px 18px; color:#1e293b; background:#eff6ff; }
     .btn-publish { width:100%; margin-top:16px; color:#fff; background:#2563eb; }
@@ -115,7 +117,7 @@
               <option value="vikas_nayak">Vikas Nayak</option><option value="surendra_das">Surendra Das</option>
             </select>
           </div>
-          <div><label for="password">6-Digit Numeric Password <span>*</span></label>
+          <div class="password-field"><label for="password">6-Digit Numeric Password <span>*</span></label>
             <div class="password-input-row">
               <input type="text" id="password" maxlength="6" pattern="\d{6}" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6)" placeholder="123456" disabled required>
               <button type="button" class="btn-auto-password" id="autoPasswordBtn" onclick="generateRandomPassword()" disabled>🎲 Auto</button>
@@ -299,9 +301,9 @@
           const rows = sessions.map(session => {
             const start = parseSessionDate(session.start_time);
             const state = start && start > now ? "Scheduled" : "Active";
-            return `<tr><td>${getTopicLabel(session.topic_id)}<br><b>${session.name || ""}</b></td><td>${session.trainer_name || "—"}</td><td>${session.password || "—"}</td><td>${formatISTDisplay(session.start_time)}</td><td>${formatISTDisplay(session.expiry)}</td><td>${state}</td></tr>`;
+            return `<tr><td>${getTopicLabel(session.topic_id)}</td><td>${session.trainer_name || "—"}</td><td>${session.password || "—"}</td><td>${formatISTDisplay(session.start_time)}</td><td>${formatISTDisplay(session.expiry)}</td><td>${state}</td></tr>`;
           }).join("");
-          liveContent.innerHTML = `${vleLink}<div class="table-wrap"><table class="sessions-table"><thead><tr><th>Category / Title</th><th>Trainer</th><th>Password</th><th>Start (IST)</th><th>Expiry (IST)</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+          liveContent.innerHTML = `${vleLink}<div class="table-wrap"><table class="sessions-table"><thead><tr><th>Training Category</th><th>Trainer</th><th>Password</th><th>Start (IST)</th><th>Expiry (IST)</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         } else {
           liveContent.innerHTML = `${vleLink}<div style="color:#64748b;padding:10px 0;">Koi active session uplabdh nahi hai.</div>`;
         }
@@ -481,3 +483,14 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
