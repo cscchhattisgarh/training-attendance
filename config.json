@@ -8,6 +8,15 @@
       "password": "929870",
       "start_time": "2026-11-20T16:46:00+05:30",
       "expiry": "2026-11-20T17:06:00+05:30"
+    },
+    {
+      "id": "adsk_micro_atm_thermal_printer_order_neeraj_hardev_1795173513171",
+      "topic_id": "adsk_micro_atm_thermal_printer_order",
+      "name": "ADSK - MICRO ATM & THERMAL PRINTER ORDER",
+      "trainer_name": "Neeraj Hardev",
+      "password": "949404",
+      "start_time": "2026-11-20T17:00:00+05:30",
+      "expiry": "2026-11-20T17:20:00+05:30"
     }
   ]
 }
