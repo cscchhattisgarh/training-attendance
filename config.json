@@ -1,22 +1,13 @@
 {
   "trainings": [
     {
-      "id": "labour_ekyc_pushpen_kumar_verma_1795173403651",
+      "id": "labour_ekyc_pushpen_kumar_verma_1795517952735",
       "topic_id": "labour_ekyc",
       "name": "Labour eKYC Training Attendance Form",
       "trainer_name": "Pushpen Kumar Verma",
-      "password": "929870",
-      "start_time": "2026-11-20T16:46:00+05:30",
-      "expiry": "2026-11-20T17:06:00+05:30"
-    },
-    {
-      "id": "adsk_micro_atm_thermal_printer_order_neeraj_hardev_1795173513171",
-      "topic_id": "adsk_micro_atm_thermal_printer_order",
-      "name": "ADSK - MICRO ATM & THERMAL PRINTER ORDER",
-      "trainer_name": "Neeraj Hardev",
-      "password": "949404",
-      "start_time": "2026-11-20T17:00:00+05:30",
-      "expiry": "2026-11-20T17:20:00+05:30"
+      "password": "359340",
+      "start_time": "2026-11-24T16:50:00+05:30",
+      "expiry": "2026-11-24T17:10:00+05:30"
     }
   ]
 }
