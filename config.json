@@ -9,5 +9,13 @@
       "start_time": "2026-11-25T16:28:00+05:30",
       "expiry": "2026-11-25T16:48:00+05:30"
     }
+  ],
+  "categories": [
+    {
+      "topic_id": "custom_district_capacity_building_training",
+      "name": "District Capacity Building Training",
+      "spreadsheet_id": "1VAAZT6KlRXffDt4rV11K0wEntn5u2VZkxni5cxVFhd4",
+      "sheet_gid": 0
+    }
   ]
 }
