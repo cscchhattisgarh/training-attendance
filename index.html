@@ -38,6 +38,9 @@
       caret-color: #2563eb; letter-spacing: 12px;
     }
     #password:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    #trainingCategory { width:100%;padding:13px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#1f2937;font-size:15px;outline:none; }
+    #trainingCategory:focus { border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,0.12); }
+    #categoryLoadStatus { min-height:17px;margin:5px 0 0;color:#64748b;font-size:12px;text-align:left; }
 
     button {
       width: 100%; margin-top: 15px; padding: 14px; border: none;
@@ -119,10 +122,15 @@
     
     <div class="subtitle">
       Attendance Form खोलने के लिए<br>
-      कृपया Training Password दर्ज करें।
+      कृपया Training Category चुनें और PIN दर्ज करें।
     </div>
 
     <form id="passwordForm">
+      <label for="trainingCategory">Training Category</label>
+      <select id="trainingCategory" required disabled>
+        <option value="">Loading available categories…</option>
+      </select>
+      <div id="categoryLoadStatus" aria-live="polite"></div>
       <label for="password">Password</label>
       <div class="password-wrapper">
         <div class="password-mask" id="passwordMask">
@@ -323,7 +331,7 @@
       "Kabirdham": ["Bodla", "Kawardha", "Pandariya", "Sahaspur Lohara"],
       "Kanker": ["Antagarh", "Bhanupratappur", "Charama", "Durgukondal", "Kanker", "Koyalibeda", "Narharpur"],
       "Khairagarh": ["Chhuikhadan", "Gandai", "Khairagarh"],
-      "Kondagaon": ["Bade Rajpur", "Pharasgaon", "Keshkal", "Kondagaon", "Makdi"],
+      "Kondagaon": ["Bade Rajpur", "Faraskgaon", "Keshkal", "Kondagaon", "Makdi"],
       "Korba": ["Katghora", "Korba", "Kartala", "Pali", "Poundi-Uproda"],
       "Koriya": ["Baikunthpur", "Sonhat"],
       "Mahasamund": ["Bagbahra", "Basna", "Mahasamund", "Pithora", "Saraipali"],
@@ -448,7 +456,9 @@
         statusMsg.style.color = "#2563eb";
 
         try {
-          const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=fetchVleData&cscId=${val}`);
+          const lookupTopicId = activeSessionGlobal ? activeSessionGlobal.topic_id : "labour_ekyc";
+          const lookupSessionId = activeSessionGlobal ? activeSessionGlobal.id : "";
+          const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=fetchVleData&cscId=${val}&topicId=${encodeURIComponent(lookupTopicId)}&sessionId=${encodeURIComponent(lookupSessionId)}`);
           const result = await res.json();
 
           // Unlock general state
@@ -634,6 +644,8 @@
     let activeSessionGlobal = null;
 
     const passwordForm = document.getElementById("passwordForm");
+    const categorySelect = document.getElementById("trainingCategory");
+    const categoryLoadStatus = document.getElementById("categoryLoadStatus");
     const passwordInput = document.getElementById("password");
     const verifyButton = document.getElementById("verifyButton");
     const message = document.getElementById("message");
@@ -673,6 +685,40 @@
       }
     }
 
+    async function loadTrainingCategories() {
+      categorySelect.disabled = true;
+      categoryLoadStatus.textContent = "Loading published training categories…";
+      const config = await getConfig();
+      if (!config || !Array.isArray(config.trainings)) {
+        categorySelect.innerHTML = '<option value="">Categories are temporarily unavailable</option>';
+        categoryLoadStatus.textContent = "Unable to load categories. Please refresh the page.";
+        return;
+      }
+
+      const now = new Date();
+      const available = new Map();
+      config.trainings.forEach(session => {
+        if (!session.topic_id) return;
+        const expiry = parseISODate(session.expiry);
+        if (!expiry || isNaN(expiry.getTime()) || expiry <= now) return;
+        if (!available.has(session.topic_id)) {
+          available.set(session.topic_id, session.name || session.topic_id);
+        }
+      });
+
+      categorySelect.innerHTML = '<option value="">-- Select Training Category --</option>';
+      available.forEach((name, topicId) => {
+        const option = document.createElement("option");
+        option.value = topicId;
+        option.textContent = name;
+        categorySelect.appendChild(option);
+      });
+      categorySelect.disabled = available.size === 0;
+      categoryLoadStatus.textContent = available.size
+        ? "Select the category assigned to your training PIN."
+        : "No published training sessions are currently available.";
+    }
+
     function parseISODate(dateStr) {
       if (!dateStr) return null;
       let cleanStr = dateStr.trim();
@@ -682,10 +728,18 @@
 
     passwordForm.addEventListener("submit", async function(e) {
       e.preventDefault();
+      const selectedTopic = categorySelect.value;
       const userPwd = passwordInput.value.trim();
 
+      if (!selectedTopic) {
+        message.textContent = "Please select a training category.";
+        message.className = "message error";
+        categorySelect.focus();
+        return;
+      }
+
       if (!/^\d{6}$/.test(userPwd)) {
-        message.textContent = "कृपया केवल 6 अंकों का Numeric Password दर्ज करें।";
+        message.textContent = "Enter a valid 6-digit numeric PIN.";
         message.className = "message error";
         passwordInput.focus();
         return;
@@ -698,19 +752,24 @@
       const config = await getConfig();
       if (!config) {
         verifyButton.disabled = false;
-        message.textContent = "Config File Read Error! Admin se sampark karein.";
+        message.textContent = "Unable to load training details. Please try again.";
         message.className = "message error";
         return;
       }
 
-      let matchingSessions = [];
-      if (config.trainings && Array.isArray(config.trainings)) {
-        matchingSessions = config.trainings.filter(t => String(t.password).trim() === userPwd);
+      const configuredSessions = Array.isArray(config.trainings) ? config.trainings : [];
+      const categorySessions = configuredSessions.filter(session => session.topic_id === selectedTopic);
+      if (categorySessions.length === 0) {
+        verifyButton.disabled = false;
+        message.textContent = "No published session is available for this category. Refresh the page.";
+        message.className = "message error";
+        return;
       }
 
+      const matchingSessions = categorySessions.filter(session => String(session.password).trim() === userPwd);
       if (matchingSessions.length === 0) {
         verifyButton.disabled = false;
-        message.textContent = "गलत Password! सही Password दर्ज करें।";
+        message.textContent = "The PIN does not match the selected category.";
         message.className = "message error";
         passwordInput.value = "";
         updateMask(passwordInput);
@@ -742,9 +801,9 @@
       if (!activeSession) {
         verifyButton.disabled = false;
         if (isNotStartedYet && !isExpired) {
-          message.textContent = "यह Training अभी शुरू नहीं हुई है!";
+          message.textContent = "This training session has not started yet.";
         } else {
-          message.textContent = "यह Training Password Expire हो चुका है!";
+          message.textContent = "This training PIN has expired.";
         }
         message.className = "message error";
         passwordInput.value = "";
@@ -753,8 +812,6 @@
       }
 
       activeSessionGlobal = activeSession;
-      passwordContainer.style.display = "none";
-
       if (activeSession.topic_id === "wifi_choupal") {
         googleForm.src = `${SCRIPT_WEB_APP_URL}?action=loadWifiForm`;
         formContainer.style.display = "block";
@@ -762,13 +819,22 @@
       } else if (activeSession.topic_id === "adsk_micro_atm_thermal_printer_order") {
         adskFormWrapper.style.display = "block";
         document.body.style.display = "block";
-      } else {
+      } else if (activeSession.topic_id === "labour_ekyc" || activeSession.topic_id === "district_capacity_building" ||
+        (Array.isArray(config.categories) && config.categories.some(category => category.topic_id === activeSession.topic_id))) {
         initDistricts();
         document.getElementById("activeSessionHeader").textContent = activeSession.name || "Labour eKYC Attendance Form";
         formWrapper.style.display = "block";
         document.body.style.display = "block";
+      } else {
+        verifyButton.disabled = false;
+        message.textContent = "This category does not have a configured attendance form yet.";
+        message.className = "message error";
+        return;
       }
+      passwordContainer.style.display = "none";
     });
+
+    loadTrainingCategories();
 
     let lastAdskLookupId = "";
     let adskVleFound = false;
@@ -931,7 +997,10 @@
       msg.textContent = "";
 
       const currentTopicName = (activeSessionGlobal && activeSessionGlobal.name) ? activeSessionGlobal.name : "Labour eKYC Training";
-      const currentTopicCode = (activeSessionGlobal && activeSessionGlobal.topic_id === "wifi_choupal") ? "W" : "L";
+      const currentTopicId = activeSessionGlobal ? activeSessionGlobal.topic_id : "labour_ekyc";
+      const customTopicCode = currentTopicName.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase();
+      const currentTopicCode = currentTopicId === "wifi_choupal" ? "W" :
+        (currentTopicId === "district_capacity_building" ? "D" : (currentTopicId.indexOf("custom_") === 0 ? (customTopicCode || "T") : "L"));
       const trainerInitials = extractTrainerInitials(activeSessionGlobal);
 
       const payload = {
@@ -943,6 +1012,8 @@
         name: document.getElementById("vleName").value.trim(),
         mobile: mobile,
         topicCode: currentTopicCode,
+        topicId: currentTopicId,
+        sessionId: activeSessionGlobal ? activeSessionGlobal.id : "",
         trainerInitials: trainerInitials,
         trainingTopicName: currentTopicName
       };
