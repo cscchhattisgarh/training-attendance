@@ -79,6 +79,11 @@
     .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
     .btn-cancel { background: #64748b; color: white; }
     .btn-overwrite { background: #dc2626; color: white; }
+    .admin-tabs { display:flex;gap:8px;margin:0 0 16px;padding:5px;border:1px solid #dbe4f0;border-radius:11px;background:#e9eff7; }
+    .admin-tab { flex:1;padding:12px;border-radius:8px;color:#52657d;background:transparent;transition:background .15s,color .15s,box-shadow .15s; }
+    .admin-tab:hover { color:#1e3a8a;background:#f5f8fc; }
+    .admin-tab[aria-selected="true"] { color:#1e3a8a;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.1); }
+    .admin-tab-panel[hidden] { display:none; }
   </style>
 </head>
 <body>
@@ -94,8 +99,36 @@
       <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="current-password" required>
       <p class="helper-text">Is field mein GitHub PAT daalein. Token browser mein locally save rahega.</p>
     </section>
+    <div class="admin-tabs" role="tablist" aria-label="Admin options">
+      <button type="button" class="admin-tab" id="scheduleTab" role="tab" aria-selected="true" aria-controls="schedulePanel">Training Schedule</button>
+      <button type="button" class="admin-tab" id="categoryTab" role="tab" aria-selected="false" aria-controls="categoryPanel" tabindex="-1">Add Training Category</button>
+    </div>
+    <div id="categoryPanel" class="admin-tab-panel" role="tabpanel" aria-labelledby="categoryTab" hidden>
     <section class="panel-card">
-      <h2>2. Schedule New Training Session</h2>
+      <h2>Add Training Category</h2>
+      <div class="form-grid">
+        <div>
+          <label for="categoryBackendName">Training Category</label>
+          <input id="categoryBackendName" placeholder="e.g. District Capacity Building Training" required>
+        </div>
+        <div>
+          <label for="categorySheetUrl">Response Spreadsheet URL <span>*</span></label>
+          <input type="url" id="categorySheetUrl" placeholder="Paste the Google Sheets URL with the destination tab open" required>
+        </div>
+      </div>
+      <p class="helper-text">Enter a category name and its response sheet URL. The new category will use the same attendance fields as Labour eKYC. The Apps Script owner must have Editor access.</p>
+      <button type="button" class="btn-publish" id="saveCategoryBackendBtn" onclick="saveCategoryBackend()">Save Category Sheet Setup</button>
+      <div id="categoryBackendStatus" class="status"></div>
+      <div id="categoryDuplicateNotice" class="status error" style="display:none;">
+        <span id="categoryDuplicateMessage"></span>
+        <button type="button" id="useExistingCategoryBtn" class="btn-fetch" style="display:none;max-width:280px;margin:10px auto 0;padding:9px 12px;" onclick="useExistingCategory()">Use Existing Category</button>
+      </div>
+      <div id="savedCategoryList" class="table-wrap" style="margin-top:14px;"></div>
+    </section>
+    </div>
+    <div id="schedulePanel" class="admin-tab-panel" role="tabpanel" aria-labelledby="scheduleTab">
+    <section class="panel-card">
+      <h2>Schedule New Training Session</h2>
       <form id="adminForm" onsubmit="event.preventDefault(); validateAndPrompt();">
         <div class="form-grid">
           <div><label for="trainingSelect">Training Category <span>*</span></label>
@@ -105,8 +138,8 @@
               <option value="wifi_choupal">WiFi Choupal Training (Google Form)</option>
               <option value="adsk_micro_atm_thermal_printer_order">ADSK - MICRO ATM &amp; THERMAL PRINTER ORDER</option>
             </select>
+            <p id="categoryBackendNotice" class="helper-text" style="display:none;color:#b45309;">Add and save this category in the “Add Training Category” tab before scheduling.</p>
           </div>
-
           <div><label for="trainerSelect">Trainer / Host Name <span>*</span></label>
             <select id="trainerSelect" onchange="handleSelectionChange()" required>
               <option value="" disabled selected>-- Select Trainer --</option>
@@ -131,9 +164,10 @@
       <div id="status" class="status"></div>
     </section>
     <section class="panel-card">
-      <h2>3. Scheduled &amp; Active Sessions (<span id="activeCount">0</span>)</h2>
+      <h2>Scheduled &amp; Active Sessions (<span id="activeCount">0</span>)</h2>
       <div id="currentConfigBox" class="current-box"><div id="liveContent">GitHub PAT daal kar Refresh Sessions par click karein.</div></div>
     </section>
+    </div>
   </main>
   <!-- Existing Session Overwrite Confirmation Popup -->
   <div class="modal-overlay" id="conflictModal">
@@ -169,6 +203,8 @@
     let cachedConfig = null;
     let pendingOverwriteId = null;
     let lastAutoTrainingTitle = "";
+    let categoryBackends = {};
+    let matchedCategoryTopicId = "";
 
     document.getElementById("token").value = localStorage.getItem("gh_pat") || "";
 
@@ -201,7 +237,11 @@
     function handleSelectionChange() {
       const topic = document.getElementById("trainingSelect").value;
       const trainer = document.getElementById("trainerSelect").value;
-      const isSelected = !!(topic && trainer);
+      const requiresBackend = topic === "district_capacity_building" || Object.prototype.hasOwnProperty.call(categoryBackends, topic);
+      const savedBackend = categoryBackends[topic];
+      const backendReady = !requiresBackend || !!(savedBackend && savedBackend.spreadsheet_id);
+      document.getElementById("categoryBackendNotice").style.display = requiresBackend && !backendReady ? "block" : "none";
+      const isSelected = !!(topic && trainer && backendReady);
       const start = document.getElementById("startTime");
       const expiry = document.getElementById("expiry");
       const now = getCurrentDateTimeLocal();
@@ -217,6 +257,14 @@
         expiry.value = addMinutesToDateTimeLocal(now, 20);
       }
       expiry.min = start.value || now;
+    }
+
+    function parseSpreadsheetDestination(value) {
+      const url = String(value || "").trim();
+      const idMatch = url.match(/^https:\/\/docs\.google\.com\/spreadsheets\/d\/([A-Za-z0-9_-]+)(?:\/|$)/i);
+      if (!idMatch) return null;
+      const gidMatch = url.match(/[?#&]gid=(\d+)/i);
+      return { spreadsheetId: idMatch[1], sheetGid: gidMatch ? Number(gidMatch[1]) : null };
     }
 
     function handleStartTimeChange() {
@@ -243,12 +291,107 @@
     }
 
     function getTopicLabel(topicId) {
+      if (categoryBackends[topicId] && categoryBackends[topicId].name) return categoryBackends[topicId].name;
       const labels = {
         labour_ekyc: "Labour eKYC (Web Form)",
+        district_capacity_building: "District Capacity Building Training",
         wifi_choupal: "WiFi Choupal (Google Form)",
         adsk_micro_atm_thermal_printer_order: "ADSK - MICRO ATM & THERMAL PRINTER ORDER"
       };
       return labels[topicId] || topicId || "Unknown Training";
+    }
+
+    function topicIdFromCategoryName(name) {
+      const slug = String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      return slug ? `custom_${slug}` : "";
+    }
+
+    function normalizeCategoryName(name) {
+      return String(name || "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+    }
+
+    function findCategoryNameMatch(name, excludedTopicId = "") {
+      const normalizedName = normalizeCategoryName(name);
+      if (!normalizedName) return null;
+      const savedMatch = Object.values(categoryBackends).find(category =>
+        category.topic_id !== excludedTopicId && normalizeCategoryName(category.name) === normalizedName
+      );
+      if (savedMatch) return savedMatch;
+      const builtInCategories = [
+        { topic_id: "labour_ekyc", name: "Labour eKYC Training" },
+        { topic_id: "wifi_choupal", name: "WiFi Choupal Training" },
+        { topic_id: "adsk_micro_atm_thermal_printer_order", name: "ADSK - MICRO ATM & THERMAL PRINTER ORDER" }
+      ];
+      return builtInCategories.find(category => category.topic_id !== excludedTopicId &&
+        normalizeCategoryName(category.name) === normalizedName) || null;
+    }
+
+    function showCategoryNameMatch(category) {
+      const notice = document.getElementById("categoryDuplicateNotice");
+      const button = document.getElementById("useExistingCategoryBtn");
+      if (!category) {
+        matchedCategoryTopicId = "";
+        notice.style.display = "none";
+        button.style.display = "none";
+        return;
+      }
+      matchedCategoryTopicId = category.topic_id;
+      document.getElementById("categoryDuplicateMessage").textContent =
+        `This category already exists: “${category.name}”. Choose the saved category in Training Schedule.`;
+      notice.style.display = "block";
+      button.style.display = "block";
+    }
+
+    function useExistingCategory() {
+      const select = document.getElementById("trainingSelect");
+      if (!matchedCategoryTopicId || ![...select.options].some(option => option.value === matchedCategoryTopicId)) return;
+      select.value = matchedCategoryTopicId;
+      switchAdminTab("schedule");
+      handleSelectionChange();
+    }
+
+    function renderSavedCategories() {
+      const container = document.getElementById("savedCategoryList");
+      const categories = Object.values(categoryBackends);
+      if (!categories.length) { container.innerHTML = ""; return; }
+      container.innerHTML = `<h3 style="font-size:14px;margin:16px 0 8px;">Saved Training Categories</h3><table class="sessions-table"><thead><tr><th>Category</th><th>Response Spreadsheet</th><th>Action</th></tr></thead><tbody>${categories.map(category => {
+        const url = `https://docs.google.com/spreadsheets/d/${category.spreadsheet_id}/edit${category.sheet_gid == null ? "" : `?gid=${category.sheet_gid}#gid=${category.sheet_gid}`}`;
+        return `<tr><td>${escapeHtml(category.name || category.topic_id)}</td><td><a href="${url}" target="_blank" rel="noopener">Open sheet</a></td><td><button type="button" class="btn-fetch" style="padding:7px 10px;" onclick="loadCategoryForEdit('${category.topic_id}')">Edit</button></td></tr>`;
+      }).join("")}</tbody></table>`;
+    }
+
+    function syncCategoryOptions() {
+      const select = document.getElementById("trainingSelect");
+      [...select.options].filter(option => option.dataset.configCategory === "true").forEach(option => option.remove());
+      Object.values(categoryBackends).forEach(category => {
+        const existing = [...select.options].find(option => option.value === category.topic_id);
+        if (existing) {
+          existing.textContent = category.name || category.topic_id;
+        } else {
+          const option = document.createElement("option");
+          option.value = category.topic_id;
+          option.textContent = category.name || category.topic_id;
+          option.dataset.configCategory = "true";
+          select.appendChild(option);
+        }
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char]));
+    }
+
+    function loadCategoryForEdit(topicId) {
+      const category = categoryBackends[topicId];
+      if (!category) return;
+      document.getElementById("categoryBackendName").value = category.name || "";
+      document.getElementById("categorySheetUrl").value = `https://docs.google.com/spreadsheets/d/${category.spreadsheet_id}/edit${category.sheet_gid == null ? "" : `?gid=${category.sheet_gid}#gid=${category.sheet_gid}`}`;
+      document.getElementById("categoryBackendName").dataset.editTopicId = topicId;
+      showCategoryNameMatch(null);
+      document.getElementById("categoryBackendStatus").textContent = "Edit the details and save to update this category.";
+      document.getElementById("categoryBackendStatus").className = "status";
+      switchAdminTab("category");
     }
 
     function base64ToUtf8(value) {
@@ -294,7 +437,19 @@
           const expiry = parseSessionDate(session.expiry);
           return expiry && !isNaN(expiry.getTime()) && expiry > now;
         });
-        cachedConfig = { trainings: sessions };
+        const categories = Array.isArray(config.categories) ? config.categories : [];
+        cachedConfig = { ...config, trainings: sessions, categories: categories };
+        categoryBackends = {};
+        categories.forEach(category => { if (category.topic_id) categoryBackends[category.topic_id] = category; });
+        syncCategoryOptions();
+        renderSavedCategories();
+        if (Object.keys(categoryBackends).length) {
+          document.getElementById("categoryBackendStatus").textContent = "✅ Category sheet setup is saved.";
+          document.getElementById("categoryBackendStatus").className = "status success";
+        } else {
+          document.getElementById("categoryBackendStatus").textContent = "Category sheet setup has not been saved yet.";
+          document.getElementById("categoryBackendStatus").className = "status";
+        }
         document.getElementById("activeCount").textContent = sessions.length;
         const vleLink = `<div class="vle-link-box">🔗 <b>Attendance Link for VLEs:</b><br><a href="https://cscchhattisgarh.github.io/training-attendance/" target="_blank">https://cscchhattisgarh.github.io/training-attendance/</a></div>`;
         if (sessions.length) {
@@ -330,6 +485,112 @@
       document.getElementById("startTime").focus();
     }
 
+    async function saveCategoryBackend() {
+      const token = document.getElementById("token").value.trim();
+      const url = document.getElementById("categorySheetUrl").value.trim();
+      const destination = parseSpreadsheetDestination(url);
+      const name = document.getElementById("categoryBackendName").value.trim();
+      const editTopicId = document.getElementById("categoryBackendName").dataset.editTopicId || "";
+      const topicId = editTopicId || topicIdFromCategoryName(name);
+      const status = document.getElementById("categoryBackendStatus");
+      const button = document.getElementById("saveCategoryBackendBtn");
+      if (!token) {
+        status.textContent = "Enter the GitHub PAT above before saving the category setup.";
+        status.className = "status error";
+        return;
+      }
+      if (!name) {
+        status.textContent = "Enter a training category name.";
+        status.className = "status error";
+        document.getElementById("categoryBackendName").focus();
+        return;
+      }
+      const existingNameMatch = findCategoryNameMatch(name, editTopicId);
+      if (existingNameMatch) {
+        showCategoryNameMatch(existingNameMatch);
+        return;
+      }
+      if (!destination) {
+        status.textContent = "Enter a valid Google Sheets URL.";
+        status.className = "status error";
+        document.getElementById("categorySheetUrl").focus();
+        return;
+      }
+      if (!topicId) {
+        status.textContent = "Enter a valid training category name.";
+        status.className = "status error";
+        return;
+      }
+
+      button.disabled = true;
+      status.textContent = "Saving the category sheet setup…";
+      status.className = "status";
+      try {
+        const getResponse = await fetch(API_URL, { headers: githubHeaders(token) });
+        let sha = "";
+        let config = { trainings: [], categories: [] };
+        if (getResponse.ok) {
+          const file = await getResponse.json();
+          sha = file.sha || "";
+          config = JSON.parse(base64ToUtf8(file.content));
+        } else if (getResponse.status !== 404) {
+          throw new Error("Unable to read the GitHub configuration (" + getResponse.status + ").");
+        }
+        if (!Array.isArray(config.trainings)) config.trainings = [];
+        if (!Array.isArray(config.categories)) config.categories = [];
+        const latestNameMatch = config.categories.find(item => item.topic_id !== editTopicId &&
+          normalizeCategoryName(item.name) === normalizeCategoryName(name));
+        if (latestNameMatch) {
+          categoryBackends = {};
+          config.categories.forEach(item => { if (item.topic_id) categoryBackends[item.topic_id] = item; });
+          syncCategoryOptions();
+          renderSavedCategories();
+          showCategoryNameMatch(latestNameMatch);
+          return;
+        }
+        const category = {
+          topic_id: topicId,
+          name: name,
+          spreadsheet_id: destination.spreadsheetId
+        };
+        if (destination.sheetGid !== null) category.sheet_gid = destination.sheetGid;
+        const existingIndex = config.categories.findIndex(item => item.topic_id === category.topic_id);
+        if (existingIndex >= 0) config.categories[existingIndex] = category;
+        else config.categories.push(category);
+
+        const putResponse = await fetch(API_URL, {
+          method: "PUT",
+          headers: { ...githubHeaders(token), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: `Configure ${category.name} response sheet`,
+            content: utf8ToBase64(JSON.stringify(config, null, 2)),
+            sha: sha || undefined
+          })
+        });
+        if (!putResponse.ok) {
+          const error = await putResponse.json();
+          throw new Error(error.message || "Unable to save the category sheet setup.");
+        }
+        categoryBackends = {};
+        config.categories.forEach(item => { if (item.topic_id) categoryBackends[item.topic_id] = item; });
+        cachedConfig = config;
+        delete document.getElementById("categoryBackendName").dataset.editTopicId;
+        document.getElementById("categoryBackendName").value = "";
+        document.getElementById("categorySheetUrl").value = "";
+        showCategoryNameMatch(null);
+        syncCategoryOptions();
+        renderSavedCategories();
+        status.textContent = `✅ “${category.name}” saved. Select it in Training Schedule to publish a session.`;
+        status.className = "status success";
+        handleSelectionChange();
+      } catch (err) {
+        status.textContent = "❌ " + (err.message || "Network error while saving the category setup.");
+        status.className = "status error";
+      } finally {
+        button.disabled = false;
+      }
+    }
+
     function proceedWithOverwrite() {
       document.getElementById("conflictModal").style.display = "none";
       executeSaveSession(pendingOverwriteId);
@@ -346,6 +607,11 @@
       const saveBtn = document.getElementById("saveBtn");
       if (!token || !topic || !trainer || !password || !startValue || !expiryValue) {
         status.textContent = "❌ Kripya sabhi mandatory fields bharein.";
+        status.className = "status error";
+        return;
+      }
+      if (topic === "district_capacity_building" && !categoryBackends[topic]) {
+        status.textContent = "❌ Save the category sheet setup before scheduling this training.";
         status.className = "status error";
         return;
       }
@@ -413,13 +679,14 @@
       const saveBtn = document.getElementById("saveBtn");
       const sessionNames = {
         labour_ekyc: "Labour eKYC Training Attendance Form",
+        district_capacity_building: (categoryBackends.district_capacity_building && categoryBackends.district_capacity_building.name) || "District Capacity Building Training",
         wifi_choupal: "WiFi Choupal Training Attendance Form",
         adsk_micro_atm_thermal_printer_order: "ADSK - MICRO ATM & THERMAL PRINTER ORDER"
       };
       const entry = {
         id: `${topic}_${trainer}_${Date.now()}`,
         topic_id: topic,
-        name: sessionNames[topic] || getTopicLabel(topic),
+        name: (categoryBackends[topic] && categoryBackends[topic].name) || sessionNames[topic] || getTopicLabel(topic),
         trainer_name: trainerName,
         password: password,
         start_time: `${startValue}:00+05:30`,
@@ -471,6 +738,7 @@
         document.getElementById("password").value = "";
         document.getElementById("startTime").value = "";
         document.getElementById("expiry").value = "";
+        handleSelectionChange();
         fetchCurrentConfig(true);
       } catch (err) {
         status.textContent = "❌ " + (err.message || "Network Error");
@@ -480,17 +748,40 @@
         pendingOverwriteId = null;
       }
     }
+
+    document.getElementById("categorySheetUrl").addEventListener("input", () => {
+      const status = document.getElementById("categoryBackendStatus");
+      status.textContent = "Unsaved sheet URL changes. Save the category setup to apply them.";
+      status.className = "status";
+      handleSelectionChange();
+    });
+    document.getElementById("categoryBackendName").addEventListener("input", event => {
+      const editTopicId = event.currentTarget.dataset.editTopicId || "";
+      showCategoryNameMatch(findCategoryNameMatch(event.currentTarget.value, editTopicId));
+    });
+    function switchAdminTab(selected, moveFocus = false) {
+      const scheduleSelected = selected === "schedule";
+      const scheduleTab = document.getElementById("scheduleTab");
+      const categoryTab = document.getElementById("categoryTab");
+      scheduleTab.setAttribute("aria-selected", String(scheduleSelected));
+      categoryTab.setAttribute("aria-selected", String(!scheduleSelected));
+      scheduleTab.tabIndex = scheduleSelected ? 0 : -1;
+      categoryTab.tabIndex = scheduleSelected ? -1 : 0;
+      document.getElementById("schedulePanel").hidden = !scheduleSelected;
+      document.getElementById("categoryPanel").hidden = scheduleSelected;
+      if (moveFocus) (scheduleSelected ? scheduleTab : categoryTab).focus();
+    }
+    document.getElementById("scheduleTab").addEventListener("click", () => switchAdminTab("schedule"));
+    document.getElementById("categoryTab").addEventListener("click", () => switchAdminTab("category"));
+    document.querySelectorAll(".admin-tab").forEach(tab => tab.addEventListener("keydown", event => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        switchAdminTab(tab.id === "scheduleTab" ? "category" : "schedule", true);
+      }
+    }));
+    if (document.getElementById("token").value.trim()) fetchCurrentConfig(true);
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
 
