@@ -1,13 +1,13 @@
 {
   "trainings": [
     {
-      "id": "labour_ekyc_pushpen_kumar_verma_1795524800966",
+      "id": "labour_ekyc_neeta_sahu_1795604311821",
       "topic_id": "labour_ekyc",
       "name": "Labour eKYC Training Attendance Form",
-      "trainer_name": "Pushpen Kumar Verma",
-      "password": "247997",
-      "start_time": "2026-11-24T18:25:00+05:30",
-      "expiry": "2026-11-24T18:45:00+05:30"
+      "trainer_name": "Neeta Sahu",
+      "password": "251126",
+      "start_time": "2026-11-25T16:28:00+05:30",
+      "expiry": "2026-11-25T16:48:00+05:30"
     }
   ]
 }
