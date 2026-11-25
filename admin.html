@@ -112,11 +112,11 @@
           <input id="categoryBackendName" placeholder="e.g. District Capacity Building Training" required>
         </div>
         <div>
-          <label for="categorySheetUrl">Response Spreadsheet URL <span>*</span></label>
-          <input type="url" id="categorySheetUrl" placeholder="Paste the Google Sheets URL with the destination tab open" required>
+          <label for="categorySheetUrl">Response Sheet / Form URL <span>*</span></label>
+          <input type="url" id="categorySheetUrl" placeholder="Paste the spreadsheet or Google Form URL" required>
         </div>
       </div>
-      <p class="helper-text">Enter a category name and its response sheet URL. The new category will use the same attendance fields as Labour eKYC. The Apps Script owner must have Editor access.</p>
+      <p class="helper-text">Add a new category, or select Edit below to update an existing category’s response destination. New categories use the Labour eKYC attendance fields. Apps Script owners must have Editor access to spreadsheet destinations.</p>
       <button type="button" class="btn-publish" id="saveCategoryBackendBtn" onclick="saveCategoryBackend()">Save Category Sheet Setup</button>
       <div id="categoryBackendStatus" class="status"></div>
       <div id="categoryDuplicateNotice" class="status error" style="display:none;">
@@ -203,7 +203,12 @@
     let cachedConfig = null;
     let pendingOverwriteId = null;
     let lastAutoTrainingTitle = "";
-    let categoryBackends = {};
+    const DEFAULT_CATEGORY_BACKENDS = [
+      { topic_id: "labour_ekyc", name: "Labour eKYC Training", destination_type: "spreadsheet", spreadsheet_id: "1cHHZ2h00aWI3d-e5u5ckqvjOfLG_SHFLnuq50w8nb2k", sheet_name: "Form responses 2" },
+      { topic_id: "adsk_micro_atm_thermal_printer_order", name: "ADSK - MICRO ATM & THERMAL PRINTER ORDER", destination_type: "spreadsheet", spreadsheet_id: "1arsz5BlaALMm-DlfmZrXATHUdQWP9C1UQKSM5rFvrpI", sheet_name: "Sheet1" },
+      { topic_id: "wifi_choupal", name: "BharatNet / WiFi Choupal", destination_type: "google_form", form_url: "https://docs.google.com/forms/d/e/1FAIpQLSdTuFGRAEfMzaT7lTfOzEuU4TtkGmr5Rc_aMaX4UobAhEeizw/viewform?embedded=true" }
+    ];
+    let categoryBackends = Object.fromEntries(DEFAULT_CATEGORY_BACKENDS.map(category => [category.topic_id, { ...category }]));
     let matchedCategoryTopicId = "";
 
     document.getElementById("token").value = localStorage.getItem("gh_pat") || "";
@@ -265,6 +270,25 @@
       if (!idMatch) return null;
       const gidMatch = url.match(/[?#&]gid=(\d+)/i);
       return { spreadsheetId: idMatch[1], sheetGid: gidMatch ? Number(gidMatch[1]) : null };
+    }
+
+    function parseGoogleFormDestination(value) {
+      const url = String(value || "").trim();
+      if (!/^https:\/\/docs\.google\.com\/forms\/d\/(?:e\/)?[A-Za-z0-9_-]+(?:\/|$)/i.test(url)) return null;
+      return { formUrl: url };
+    }
+
+    function categoryDestinationUrl(category) {
+      if (category.form_url) return category.form_url;
+      if (!category.spreadsheet_id) return "";
+      return `https://docs.google.com/spreadsheets/d/${category.spreadsheet_id}/edit${category.sheet_gid == null ? "" : `?gid=${category.sheet_gid}#gid=${category.sheet_gid}`}`;
+    }
+
+    function mergeCategoryBackends(savedCategories = []) {
+      categoryBackends = Object.fromEntries(DEFAULT_CATEGORY_BACKENDS.map(category => [category.topic_id, { ...category }]));
+      savedCategories.forEach(category => {
+        if (category && category.topic_id) categoryBackends[category.topic_id] = { ...categoryBackends[category.topic_id], ...category };
+      });
     }
 
     function handleStartTimeChange() {
@@ -353,11 +377,12 @@
 
     function renderSavedCategories() {
       const container = document.getElementById("savedCategoryList");
-      const categories = Object.values(categoryBackends);
+      const categories = Object.values(categoryBackends).sort((a, b) => a.name.localeCompare(b.name));
       if (!categories.length) { container.innerHTML = ""; return; }
-      container.innerHTML = `<h3 style="font-size:14px;margin:16px 0 8px;">Saved Training Categories</h3><table class="sessions-table"><thead><tr><th>Category</th><th>Response Spreadsheet</th><th>Action</th></tr></thead><tbody>${categories.map(category => {
-        const url = `https://docs.google.com/spreadsheets/d/${category.spreadsheet_id}/edit${category.sheet_gid == null ? "" : `?gid=${category.sheet_gid}#gid=${category.sheet_gid}`}`;
-        return `<tr><td>${escapeHtml(category.name || category.topic_id)}</td><td><a href="${url}" target="_blank" rel="noopener">Open sheet</a></td><td><button type="button" class="btn-fetch" style="padding:7px 10px;" onclick="loadCategoryForEdit('${category.topic_id}')">Edit</button></td></tr>`;
+      container.innerHTML = `<h3 style="font-size:14px;margin:16px 0 8px;">Existing Categories &amp; Destinations</h3><table class="sessions-table"><thead><tr><th>Category</th><th>Destination Type</th><th>Current Response Destination</th><th>Action</th></tr></thead><tbody>${categories.map(category => {
+        const url = categoryDestinationUrl(category);
+        const type = category.form_url ? "Google Form" : "Google Sheet";
+        return `<tr><td>${escapeHtml(category.name || category.topic_id)}</td><td>${type}</td><td>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>` : "—"}</td><td><button type="button" class="btn-fetch" style="padding:7px 10px;" onclick="loadCategoryForEdit('${escapeHtml(category.topic_id)}')">Edit</button></td></tr>`;
       }).join("")}</tbody></table>`;
     }
 
@@ -386,7 +411,7 @@
       const category = categoryBackends[topicId];
       if (!category) return;
       document.getElementById("categoryBackendName").value = category.name || "";
-      document.getElementById("categorySheetUrl").value = `https://docs.google.com/spreadsheets/d/${category.spreadsheet_id}/edit${category.sheet_gid == null ? "" : `?gid=${category.sheet_gid}#gid=${category.sheet_gid}`}`;
+      document.getElementById("categorySheetUrl").value = categoryDestinationUrl(category);
       document.getElementById("categoryBackendName").dataset.editTopicId = topicId;
       showCategoryNameMatch(null);
       document.getElementById("categoryBackendStatus").textContent = "Edit the details and save to update this category.";
@@ -439,8 +464,7 @@
         });
         const categories = Array.isArray(config.categories) ? config.categories : [];
         cachedConfig = { ...config, trainings: sessions, categories: categories };
-        categoryBackends = {};
-        categories.forEach(category => { if (category.topic_id) categoryBackends[category.topic_id] = category; });
+        mergeCategoryBackends(categories);
         syncCategoryOptions();
         renderSavedCategories();
         if (Object.keys(categoryBackends).length) {
@@ -488,10 +512,11 @@
     async function saveCategoryBackend() {
       const token = document.getElementById("token").value.trim();
       const url = document.getElementById("categorySheetUrl").value.trim();
-      const destination = parseSpreadsheetDestination(url);
       const name = document.getElementById("categoryBackendName").value.trim();
       const editTopicId = document.getElementById("categoryBackendName").dataset.editTopicId || "";
       const topicId = editTopicId || topicIdFromCategoryName(name);
+      const isGoogleForm = topicId === "wifi_choupal";
+      const destination = isGoogleForm ? parseGoogleFormDestination(url) : parseSpreadsheetDestination(url);
       const status = document.getElementById("categoryBackendStatus");
       const button = document.getElementById("saveCategoryBackendBtn");
       if (!token) {
@@ -511,7 +536,7 @@
         return;
       }
       if (!destination) {
-        status.textContent = "Enter a valid Google Sheets URL.";
+        status.textContent = isGoogleForm ? "Enter a valid Google Forms URL." : "Enter a valid Google Sheets URL.";
         status.className = "status error";
         document.getElementById("categorySheetUrl").focus();
         return;
@@ -538,25 +563,25 @@
         }
         if (!Array.isArray(config.trainings)) config.trainings = [];
         if (!Array.isArray(config.categories)) config.categories = [];
-        const latestNameMatch = config.categories.find(item => item.topic_id !== editTopicId &&
-          normalizeCategoryName(item.name) === normalizeCategoryName(name));
+        mergeCategoryBackends(config.categories);
+        const latestNameMatch = findCategoryNameMatch(name, editTopicId);
         if (latestNameMatch) {
-          categoryBackends = {};
-          config.categories.forEach(item => { if (item.topic_id) categoryBackends[item.topic_id] = item; });
           syncCategoryOptions();
           renderSavedCategories();
           showCategoryNameMatch(latestNameMatch);
           return;
         }
-        const category = {
-          topic_id: topicId,
-          name: name,
-          spreadsheet_id: destination.spreadsheetId
-        };
-        if (destination.sheetGid !== null) category.sheet_gid = destination.sheetGid;
-        const existingIndex = config.categories.findIndex(item => item.topic_id === category.topic_id);
-        if (existingIndex >= 0) config.categories[existingIndex] = category;
-        else config.categories.push(category);
+        const previousCategory = categoryBackends[topicId] || {};
+        const category = { topic_id: topicId, name: name, destination_type: isGoogleForm ? "google_form" : "spreadsheet" };
+        if (isGoogleForm) {
+          category.form_url = destination.formUrl;
+        } else {
+          category.spreadsheet_id = destination.spreadsheetId;
+          if (destination.sheetGid !== null) category.sheet_gid = destination.sheetGid;
+          else if (previousCategory.sheet_name) category.sheet_name = previousCategory.sheet_name;
+        }
+        categoryBackends[category.topic_id] = category;
+        config.categories = Object.values(categoryBackends);
 
         const putResponse = await fetch(API_URL, {
           method: "PUT",
@@ -571,8 +596,7 @@
           const error = await putResponse.json();
           throw new Error(error.message || "Unable to save the category sheet setup.");
         }
-        categoryBackends = {};
-        config.categories.forEach(item => { if (item.topic_id) categoryBackends[item.topic_id] = item; });
+        mergeCategoryBackends(config.categories);
         cachedConfig = config;
         delete document.getElementById("categoryBackendName").dataset.editTopicId;
         document.getElementById("categoryBackendName").value = "";
@@ -751,7 +775,7 @@
 
     document.getElementById("categorySheetUrl").addEventListener("input", () => {
       const status = document.getElementById("categoryBackendStatus");
-      status.textContent = "Unsaved sheet URL changes. Save the category setup to apply them.";
+      status.textContent = "Unsaved destination changes. Save the category setup to apply them.";
       status.className = "status";
       handleSelectionChange();
     });
@@ -779,9 +803,10 @@
         switchAdminTab(tab.id === "scheduleTab" ? "category" : "schedule", true);
       }
     }));
+    syncCategoryOptions();
+    renderSavedCategories();
     if (document.getElementById("token").value.trim()) fetchCurrentConfig(true);
   </script>
 </body>
 </html>
-
 
