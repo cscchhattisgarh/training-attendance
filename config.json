@@ -1,13 +1,13 @@
 {
   "trainings": [
     {
-      "id": "labour_ekyc_neeta_sahu_1795604311821",
-      "topic_id": "labour_ekyc",
-      "name": "Labour eKYC Training Attendance Form",
-      "trainer_name": "Neeta Sahu",
-      "password": "251126",
-      "start_time": "2026-11-25T16:28:00+05:30",
-      "expiry": "2026-11-25T16:48:00+05:30"
+      "id": "custom_district_capacity_building_training_krishnandan_kumar_1795610124594",
+      "topic_id": "custom_district_capacity_building_training",
+      "name": "District Capacity Building Training",
+      "trainer_name": "Krishnandan Kumar",
+      "password": "519436",
+      "start_time": "2026-11-25T18:05:00+05:30",
+      "expiry": "2026-11-25T18:25:00+05:30"
     }
   ],
   "categories": [
