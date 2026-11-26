@@ -425,8 +425,45 @@
       });
     }
 
+    let cscLookupVersion = 0;
+
+    function clearAttendanceFieldsForLookup() {
+      unlockAllFields();
+      ["vleName", "gpWard", "mobile", "email"].forEach(id => {
+        const field = document.getElementById(id);
+        field.value = "";
+        field.readOnly = false;
+      });
+      document.getElementById("district").value = "";
+      document.getElementById("district").disabled = false;
+      populateBlocks();
+      document.getElementById("block").value = "";
+      document.getElementById("block").disabled = true;
+    }
+
+    async function fetchVleRecord(cscId, topicId, sessionId, retry = 0) {
+      const url = new URL(SCRIPT_WEB_APP_URL);
+      url.searchParams.set("action", "fetchVleData");
+      url.searchParams.set("cscId", cscId);
+      url.searchParams.set("topicId", topicId);
+      url.searchParams.set("sessionId", sessionId);
+      url.searchParams.set("_", `${Date.now()}-${retry}`);
+      const response = await fetch(url.toString(), { cache: "no-store" });
+      if (!response.ok) throw new Error(`Lookup request failed (${response.status}).`);
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
+      // Retry one clean, cache-busted lookup before treating the CSC ID as new.
+      if (!result.found && retry === 0) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        return fetchVleRecord(cscId, topicId, sessionId, 1);
+      }
+      return result;
+    }
+
     // CSC ID Validation, Dynamic Freeze & Intelligent Pre-fill
     async function handleCscInput(input) {
+      const lookupVersion = ++cscLookupVersion;
       input.value = input.value.replace(/[^0-9]/g, '');
       const val = input.value;
       const counter = document.getElementById("cscCounter");
@@ -460,6 +497,7 @@
           err.style.display = "none";
         }
 
+        clearAttendanceFieldsForLookup();
         // STEP 1: Temporary Freeze during verification
         setFormInputsState(true);
         statusMsg.textContent = "⏳ रिकॉर्ड्स की जाँच की जा रही है, कृपया प्रतीक्षा करें...";
@@ -468,8 +506,8 @@
         try {
           const lookupTopicId = activeSessionGlobal ? activeSessionGlobal.topic_id : "labour_ekyc";
           const lookupSessionId = activeSessionGlobal ? activeSessionGlobal.id : "";
-          const res = await fetch(`${SCRIPT_WEB_APP_URL}?action=fetchVleData&cscId=${val}&topicId=${encodeURIComponent(lookupTopicId)}&sessionId=${encodeURIComponent(lookupSessionId)}`);
-          const result = await res.json();
+          const result = await fetchVleRecord(val, lookupTopicId, lookupSessionId);
+          if (lookupVersion !== cscLookupVersion || input.value !== val) return;
 
           // Unlock general state
           setFormInputsState(false);
@@ -589,14 +627,17 @@
           } else {
             // Scenario C: Fresh VLE
             unlockAllFields();
+            clearAttendanceFieldsForLookup();
             statusMsg.textContent = "New VLE - Fill all details";
             statusMsg.style.color = "#16a34a";
           }
         } catch (fetchErr) {
+          if (lookupVersion !== cscLookupVersion || input.value !== val) return;
           setFormInputsState(false);
           unlockAllFields();
-          statusMsg.textContent = "Network issue. Please fill manually.";
-          statusMsg.style.color = "#d97706";
+          document.getElementById("submitFormBtn").disabled = true;
+          statusMsg.textContent = "Lookup verify nahi ho paya. CSC ID ka aakhri digit hata kar dobara type karein.";
+          statusMsg.style.color = "#dc2626";
         }
       }
     }
@@ -1091,3 +1132,5 @@
   </script>
 </body>
 </html>
+
+
