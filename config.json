@@ -8,6 +8,15 @@
       "password": "909090",
       "start_time": "2026-11-26T10:52:00+05:30",
       "expiry": "2026-11-26T11:12:00+05:30"
+    },
+    {
+      "id": "custom_district_capacity_building_training_pushpen_kumar_verma_1795670674079",
+      "topic_id": "custom_district_capacity_building_training",
+      "name": "District Capacity Building Training",
+      "trainer_name": "Pushpen Kumar Verma",
+      "password": "909090",
+      "start_time": "2026-11-26T10:54:00+05:30",
+      "expiry": "2026-11-26T11:14:00+05:30"
     }
   ],
   "categories": [
