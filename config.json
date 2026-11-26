@@ -1,13 +1,13 @@
 {
   "trainings": [
     {
-      "id": "labour_ekyc_pushpen_kumar_verma_1795668080357",
+      "id": "labour_ekyc_pushpen_kumar_verma_1795670589544",
       "topic_id": "labour_ekyc",
       "name": "Labour eKYC Training",
       "trainer_name": "Pushpen Kumar Verma",
       "password": "909090",
-      "start_time": "2026-11-26T10:11:00+05:30",
-      "expiry": "2026-11-26T10:17:00+05:30"
+      "start_time": "2026-11-26T10:52:00+05:30",
+      "expiry": "2026-11-26T11:12:00+05:30"
     }
   ],
   "categories": [
