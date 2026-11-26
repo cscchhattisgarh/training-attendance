@@ -1,22 +1,13 @@
 {
   "trainings": [
     {
-      "id": "labour_ekyc_pushpen_kumar_verma_1795624956971",
+      "id": "labour_ekyc_pushpen_kumar_verma_1795668080357",
       "topic_id": "labour_ekyc",
       "name": "Labour eKYC Training",
       "trainer_name": "Pushpen Kumar Verma",
       "password": "909090",
-      "start_time": "2026-11-25T22:12:00+05:30",
-      "expiry": "2026-11-25T22:32:00+05:30"
-    },
-    {
-      "id": "custom_district_capacity_building_training_pushpen_kumar_verma_1795625021213",
-      "topic_id": "custom_district_capacity_building_training",
-      "name": "District Capacity Building Training",
-      "trainer_name": "Pushpen Kumar Verma",
-      "password": "909090",
-      "start_time": "2026-11-25T22:13:00+05:30",
-      "expiry": "2026-11-25T22:33:00+05:30"
+      "start_time": "2026-11-26T10:11:00+05:30",
+      "expiry": "2026-11-26T10:17:00+05:30"
     }
   ],
   "categories": [
