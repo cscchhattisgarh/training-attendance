@@ -1,13 +1,13 @@
 {
   "trainings": [
     {
-      "id": "wifi_choupal_neeraj_hardev_1795684267809",
+      "id": "wifi_choupal_neeraj_hardev_1795692069879",
       "topic_id": "wifi_choupal",
       "name": "BharatNet / WiFi Choupal",
       "trainer_name": "Neeraj Hardev",
-      "password": "985703",
-      "start_time": "2026-11-26T14:40:00+05:30",
-      "expiry": "2026-11-26T16:00:00+05:30"
+      "password": "261126",
+      "start_time": "2026-11-26T16:52:00+05:30",
+      "expiry": "2026-11-26T17:30:00+05:30"
     }
   ],
   "categories": [
