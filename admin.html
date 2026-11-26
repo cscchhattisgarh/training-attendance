@@ -244,7 +244,7 @@
       const trainer = document.getElementById("trainerSelect").value;
       const requiresBackend = topic === "district_capacity_building" || Object.prototype.hasOwnProperty.call(categoryBackends, topic);
       const savedBackend = categoryBackends[topic];
-      const backendReady = !requiresBackend || !!(savedBackend && savedBackend.spreadsheet_id);
+      const backendReady = !requiresBackend || !!(savedBackend && (savedBackend.spreadsheet_id || savedBackend.form_url));
       document.getElementById("categoryBackendNotice").style.display = requiresBackend && !backendReady ? "block" : "none";
       const isSelected = !!(topic && trainer && backendReady);
       const start = document.getElementById("startTime");
@@ -809,4 +809,14 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
 
