@@ -381,6 +381,16 @@
       }
     }
 
+    function normalizeLocationLabel(value) {
+      return String(value || "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+    }
+
+    function findMatchingSelectOption(select, value) {
+      const target = normalizeLocationLabel(value);
+      if (!target) return null;
+      return Array.from(select.options).find(option => normalizeLocationLabel(option.value || option.textContent) === target) || null;
+    }
+
     // Helper: Sabhi input fields ko freeze ya unfreeze karna
     function setFormInputsState(disabled) {
       const fieldIds = ["vleName", "district", "block", "gpWard", "mobile", "email", "submitFormBtn"];
@@ -496,28 +506,35 @@
               missingFields.push("Full Name");
             }
 
-            // District & Block
-            if (d.district && d.district.trim() !== "") {
-              const distEl = document.getElementById("district");
-              distEl.value = d.district;
+            // District and block names in old rows may be uppercase; match the
+            // dropdown values without case sensitivity before locking them.
+            const distEl = document.getElementById("district");
+            const blockEl = document.getElementById("block");
+            const matchingDistrict = findMatchingSelectOption(distEl, d.district);
+            if (matchingDistrict) {
+              distEl.value = matchingDistrict.value;
               distEl.disabled = true;
               document.getElementById("distBadge").style.display = "inline";
 
-              populateBlocks(d.block);
-              if (d.block && d.block.trim() !== "") {
-                const blkEl = document.getElementById("block");
-                blkEl.disabled = true;
+              populateBlocks();
+              const matchingBlock = findMatchingSelectOption(blockEl, d.block);
+              if (matchingBlock) {
+                blockEl.value = matchingBlock.value;
+                blockEl.disabled = true;
                 document.getElementById("blockBadge").style.display = "inline";
               } else {
-                document.getElementById("block").disabled = false;
+                blockEl.value = "";
+                blockEl.disabled = false;
                 document.getElementById("blockBadge").style.display = "none";
                 missingFields.push("Block");
               }
             } else {
-              document.getElementById("district").disabled = false;
-              document.getElementById("district").value = "";
+              distEl.value = "";
+              distEl.disabled = false;
               document.getElementById("distBadge").style.display = "none";
-              document.getElementById("block").disabled = true;
+              populateBlocks();
+              blockEl.value = "";
+              blockEl.disabled = true;
               document.getElementById("blockBadge").style.display = "none";
               missingFields.push("District", "Block");
             }
@@ -977,6 +994,10 @@
       e.preventDefault();
 
       const cscId = document.getElementById("cscId").value.trim();
+      const name = document.getElementById("vleName").value.trim();
+      const district = document.getElementById("district").value.trim();
+      const block = document.getElementById("block").value.trim();
+      const gpWard = document.getElementById("gpWard").value.trim();
       const mobile = document.getElementById("mobile").value.trim();
       const email = document.getElementById("email").value.trim();
       const submitBtn = document.getElementById("submitFormBtn");
@@ -989,6 +1010,24 @@
 
       if (!/^\d{10}$/.test(mobile)) {
         alert("Mobile Number ठीक 10 अंकों का होना चाहिए!");
+        return;
+      }
+
+      const missingLocationOrProfile = [
+        ["vleName", name, "VLE Full Name"],
+        ["district", district, "District"],
+        ["block", block, "Block"],
+        ["gpWard", gpWard, "Gram Panchayat / Ward"],
+        ["email", email, "Email Address"]
+      ].find(([, value]) => !value);
+      if (missingLocationOrProfile) {
+        alert(`कृपया ${missingLocationOrProfile[2]} भरें या चुनें।`);
+        document.getElementById(missingLocationOrProfile[0]).focus();
+        return;
+      }
+      if (!/^\S+@\S+\.\S+$/.test(email)) {
+        alert("कृपया सही Email Address दर्ज करें।");
+        document.getElementById("email").focus();
         return;
       }
 
