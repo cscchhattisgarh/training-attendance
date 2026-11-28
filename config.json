@@ -1,13 +1,13 @@
 {
   "trainings": [
     {
-      "id": "custom_district_capacity_building_training_neeta_sahu_1795848900539",
-      "topic_id": "custom_district_capacity_building_training",
-      "name": "District Capacity Building Training",
-      "trainer_name": "Neeta Sahu",
-      "password": "281126",
-      "start_time": "2026-11-28T12:25:00+05:30",
-      "expiry": "2026-11-28T12:45:00+05:30"
+      "id": "labour_ekyc_pushpen_kumar_verma_1795850741108",
+      "topic_id": "labour_ekyc",
+      "name": "Labour eKYC Training",
+      "trainer_name": "Pushpen Kumar Verma",
+      "password": "894853",
+      "start_time": "2026-11-28T12:55:00+05:30",
+      "expiry": "2026-11-28T13:15:00+05:30"
     }
   ],
   "categories": [
