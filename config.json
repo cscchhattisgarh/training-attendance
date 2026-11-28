@@ -1,13 +1,13 @@
 {
   "trainings": [
     {
-      "id": "wifi_choupal_neeraj_hardev_1795785457668",
-      "topic_id": "wifi_choupal",
-      "name": "BharatNet / WiFi Choupal",
-      "trainer_name": "Neeraj Hardev",
-      "password": "447136",
-      "start_time": "2026-11-27T18:48:00+05:30",
-      "expiry": "2026-11-27T19:30:00+05:30"
+      "id": "custom_district_capacity_building_training_neeta_sahu_1795848900539",
+      "topic_id": "custom_district_capacity_building_training",
+      "name": "District Capacity Building Training",
+      "trainer_name": "Neeta Sahu",
+      "password": "281126",
+      "start_time": "2026-11-28T12:25:00+05:30",
+      "expiry": "2026-11-28T12:45:00+05:30"
     }
   ],
   "categories": [
