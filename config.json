@@ -1,22 +1,13 @@
 {
   "trainings": [
     {
-      "id": "wifi_choupal_neeraj_hardev_1795857090133",
+      "id": "wifi_choupal_neeraj_hardev_1795870525910",
       "topic_id": "wifi_choupal",
       "name": "BharatNet / WiFi Choupal",
       "trainer_name": "Neeraj Hardev",
-      "password": "992217",
-      "start_time": "2026-11-28T14:41:00+05:30",
-      "expiry": "2026-11-28T17:30:00+05:30"
-    },
-    {
-      "id": "labour_ekyc_pushpen_kumar_verma_1795859504805",
-      "topic_id": "labour_ekyc",
-      "name": "Labour eKYC Training",
-      "trainer_name": "Pushpen Kumar Verma",
-      "password": "190600",
-      "start_time": "2026-11-28T15:25:00+05:30",
-      "expiry": "2026-11-28T15:45:00+05:30"
+      "password": "643377",
+      "start_time": "2026-11-28T18:30:00+05:30",
+      "expiry": "2026-11-28T19:10:00+05:30"
     }
   ],
   "categories": [
